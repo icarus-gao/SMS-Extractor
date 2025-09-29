@@ -1,0 +1,21 @@
+# dotenv
+.env
+.env.*
+!.env.example
+
+# streamlit secrets
+.streamlit/secrets.toml
+
+# data outputs
+data/master.csv
+data/evidence_log.csv
+data/uploads/
+data/raw/
+
+# Python cache / IDE
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.idea/
+.vscode/

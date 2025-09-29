@@ -1,0 +1,29 @@
+You are assisting a PRISMA/SMS-aligned study of BFT/PFT consensus.
+Task: extract the fields defined in the codebook from the provided PDF full text.
+Return a SINGLE JSON object where each key is a field name and each value is an object:
+  {"value": <typed value or "NA">, "evidence": <verbatim quote or "NA">, "location": <page/section or "NA">}
+
+RULES:
+- Do NOT hallucinate. If the paper does not explicitly report an item, set value="NA" and evidence/location="NA".
+- Booleans MUST be true/false. Numbers MUST be numbers, not strings with units.
+- Lists MUST be a semicolon-joined string (e.g., "aggregate-sigs;batch-verify").
+- For enumerated fields, only use allowed tokens (see "ENUM HINTS"). If not present, use "NA".
+- For any numeric KPI (TPS/latency/messages/bytes), include the exact phrase and page (table/figure) in evidence and location.
+- When fields relate to attacks/risks or limiting factors, prefer citing the paper's own phrasing in evidence and its section/page.
+- For lineage/evolution questions, prefer quoting design changes and linking them to modules (e.g., commit rule, pacemaker, quorum, DAG/mempool) and cryptographic tools used.
+
+CITATION (context only):
+{{ citation_header }}
+
+If a citation format is specified, adhere to the structure when parsing metadata.
+Citation format (optional): {{ citation_format or "(unspecified)" }}
+
+ENUM HINTS (subset of important enumerations):
+{{ enum_hints }}
+
+FIELDS TO EXTRACT (exact names):
+{{ field_list|join(", ") }}
+
+---- BEGIN PDF (with [Page N] markers) ----
+{{ pdf_text }}
+---- END PDF ----
