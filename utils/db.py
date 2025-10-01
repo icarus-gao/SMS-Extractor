@@ -25,13 +25,15 @@ def init_db(db_path: str = None) -> str:
             """
             CREATE TABLE IF NOT EXISTS papers (
                 paper_id TEXT PRIMARY KEY,
+                project_id TEXT,
                 title TEXT,
                 citation TEXT,
                 citation_format TEXT,
                 pdf_sha256 TEXT,
                 pdf_path TEXT,
                 created_at INTEGER,
-                updated_at INTEGER
+                updated_at INTEGER,
+                FOREIGN KEY (project_id) REFERENCES projects(project_id)
             )
             """
         )
@@ -58,6 +60,9 @@ def init_db(db_path: str = None) -> str:
                 project_id TEXT NOT NULL,
                 group_name TEXT NOT NULL,
                 fields_json TEXT NOT NULL,
+                codebook_path TEXT,
+                prompt_path TEXT,
+                description TEXT,
                 created_at INTEGER,
                 updated_at INTEGER,
                 UNIQUE(project_id, group_name),
@@ -92,10 +97,22 @@ def init_db(db_path: str = None) -> str:
         # migration: add missing columns if upgrading from older versions
         try:
             cols = {r[1] for r in c.execute("PRAGMA table_info(papers)").fetchall()}
+            if "project_id" not in cols:
+                c.execute("ALTER TABLE papers ADD COLUMN project_id TEXT")
             if "citation_format" not in cols:
                 c.execute("ALTER TABLE papers ADD COLUMN citation_format TEXT")
             if "pdf_sha256" not in cols:
                 c.execute("ALTER TABLE papers ADD COLUMN pdf_sha256 TEXT")
+        except Exception:
+            pass
+        try:
+            gcols = {r[1] for r in c.execute("PRAGMA table_info(project_groups)").fetchall()}
+            if "codebook_path" not in gcols:
+                c.execute("ALTER TABLE project_groups ADD COLUMN codebook_path TEXT")
+            if "prompt_path" not in gcols:
+                c.execute("ALTER TABLE project_groups ADD COLUMN prompt_path TEXT")
+            if "description" not in gcols:
+                c.execute("ALTER TABLE project_groups ADD COLUMN description TEXT")
         except Exception:
             pass
         try:
@@ -113,13 +130,23 @@ def init_db(db_path: str = None) -> str:
         # indexes
         # helpful index for dedup lookup
         c.execute("CREATE INDEX IF NOT EXISTS idx_papers_pdfsha ON papers(pdf_sha256)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_papers_project ON papers(project_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_extractions_batch ON extractions(batch_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_groups_project ON project_groups(project_id)")
         conn.commit()
     return db_path
 
 
-def insert_or_update_paper(db_path: str, paper_id: str, citation: str, pdf_path: str, title: Optional[str] = None, citation_format: Optional[str] = None, pdf_sha256: Optional[str] = None) -> None:
+def insert_or_update_paper(
+    db_path: str,
+    paper_id: str,
+    project_id: Optional[str],
+    citation: str,
+    pdf_path: str,
+    title: Optional[str] = None,
+    citation_format: Optional[str] = None,
+    pdf_sha256: Optional[str] = None,
+) -> None:
     now = int(time.time())
     with _connect(db_path) as conn:
         c = conn.cursor()
@@ -127,13 +154,13 @@ def insert_or_update_paper(db_path: str, paper_id: str, citation: str, pdf_path:
         exists = c.fetchone() is not None
         if exists:
             c.execute(
-                "UPDATE papers SET title=?, citation=?, citation_format=?, pdf_sha256=?, pdf_path=?, updated_at=? WHERE paper_id=?",
-                (title, citation, citation_format, pdf_sha256, pdf_path, now, paper_id),
+                "UPDATE papers SET project_id=?, title=?, citation=?, citation_format=?, pdf_sha256=?, pdf_path=?, updated_at=? WHERE paper_id=?",
+                (project_id, title, citation, citation_format, pdf_sha256, pdf_path, now, paper_id),
             )
         else:
             c.execute(
-                "INSERT INTO papers (paper_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
-                (paper_id, title, citation, citation_format, pdf_sha256, pdf_path, now, now),
+                "INSERT INTO papers (paper_id, project_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (paper_id, project_id, title, citation, citation_format, pdf_sha256, pdf_path, now, now),
             )
         conn.commit()
 
@@ -190,7 +217,7 @@ def add_extraction(
 def list_papers(db_path: str) -> List[Dict[str, Any]]:
     with _connect(db_path) as conn:
         rows = conn.execute(
-            "SELECT paper_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at FROM papers ORDER BY updated_at DESC"
+            "SELECT paper_id, project_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at FROM papers ORDER BY updated_at DESC"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -198,7 +225,7 @@ def list_papers(db_path: str) -> List[Dict[str, Any]]:
 def get_paper(db_path: str, paper_id: str) -> Optional[Dict[str, Any]]:
     with _connect(db_path) as conn:
         row = conn.execute(
-            "SELECT paper_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at FROM papers WHERE paper_id=?",
+            "SELECT paper_id, project_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at FROM papers WHERE paper_id=?",
             (paper_id,),
         ).fetchone()
     return dict(row) if row else None
@@ -218,7 +245,7 @@ def list_extractions(db_path: str, paper_id: str) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for r in rows:
         item = dict(r)
-        # 结果 JSON 延迟解析，界面展示时再 parse
+        # Defer result JSON parsing; the UI will parse it only when needed.
         out.append(item)
     return out
 
@@ -241,7 +268,7 @@ def latest_extraction(db_path: str, paper_id: str) -> Optional[Dict[str, Any]]:
 def get_paper_by_sha(db_path: str, pdf_sha256: str) -> Optional[Dict[str, Any]]:
     with _connect(db_path) as conn:
         row = conn.execute(
-            "SELECT paper_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at FROM papers WHERE pdf_sha256=?",
+            "SELECT paper_id, project_id, title, citation, citation_format, pdf_sha256, pdf_path, created_at, updated_at FROM papers WHERE pdf_sha256=?",
             (pdf_sha256,),
         ).fetchone()
     return dict(row) if row else None
@@ -292,6 +319,20 @@ def upsert_project(db_path: str, project_id: str, name: str, codebook_path: str,
         conn.commit()
 
 
+def rename_project_id(db_path: str, old_id: str, new_id: str) -> None:
+    now = int(time.time())
+    with _connect(db_path) as conn:
+        c = conn.cursor()
+        exists = c.execute("SELECT 1 FROM projects WHERE project_id=?", (new_id,)).fetchone()
+        if exists:
+            raise ValueError("Target project_id already exists")
+        c.execute("UPDATE projects SET project_id=?, updated_at=? WHERE project_id=?", (new_id, now, old_id))
+        c.execute("UPDATE papers SET project_id=? WHERE project_id=?", (new_id, old_id))
+        c.execute("UPDATE extractions SET project_id=? WHERE project_id=?", (new_id, old_id))
+        c.execute("UPDATE project_groups SET project_id=? WHERE project_id=?", (new_id, old_id))
+        conn.commit()
+
+
 def list_projects(db_path: str) -> List[Dict[str, Any]]:
     with _connect(db_path) as conn:
         rows = conn.execute(
@@ -318,21 +359,29 @@ def delete_project(db_path: str, project_id: str) -> None:
 
 
 # Project groups CRUD
-def upsert_project_group(db_path: str, project_id: str, group_name: str, fields: List[str]) -> None:
+def upsert_project_group(
+    db_path: str,
+    project_id: str,
+    group_name: str,
+    fields: Optional[List[str]] = None,
+    codebook_path: Optional[str] = None,
+    prompt_path: Optional[str] = None,
+    description: Optional[str] = None,
+) -> None:
     now = int(time.time())
-    payload = json.dumps(list(fields), ensure_ascii=False)
+    payload = json.dumps(list(fields or []), ensure_ascii=False)
     with _connect(db_path) as conn:
         c = conn.cursor()
         exists = c.execute("SELECT 1 FROM project_groups WHERE project_id=? AND group_name=?", (project_id, group_name)).fetchone() is not None
         if exists:
             c.execute(
-                "UPDATE project_groups SET fields_json=?, updated_at=? WHERE project_id=? AND group_name=?",
-                (payload, now, project_id, group_name),
+                "UPDATE project_groups SET fields_json=?, codebook_path=?, prompt_path=?, description=?, updated_at=? WHERE project_id=? AND group_name=?",
+                (payload, codebook_path, prompt_path, description, now, project_id, group_name),
             )
         else:
             c.execute(
-                "INSERT INTO project_groups (project_id, group_name, fields_json, created_at, updated_at) VALUES (?,?,?,?,?)",
-                (project_id, group_name, payload, now, now),
+                "INSERT INTO project_groups (project_id, group_name, fields_json, codebook_path, prompt_path, description, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                (project_id, group_name, payload, codebook_path, prompt_path, description, now, now),
             )
         conn.commit()
 
@@ -340,15 +389,41 @@ def upsert_project_group(db_path: str, project_id: str, group_name: str, fields:
 def list_project_groups(db_path: str, project_id: str) -> List[Dict[str, Any]]:
     with _connect(db_path) as conn:
         rows = conn.execute(
-            "SELECT id, project_id, group_name, fields_json, created_at, updated_at FROM project_groups WHERE project_id=? ORDER BY group_name",
+            """
+            SELECT id, project_id, group_name, fields_json, codebook_path, prompt_path, description, created_at, updated_at
+            FROM project_groups
+            WHERE project_id=?
+            ORDER BY group_name
+            """,
             (project_id,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def rename_project_group(db_path: str, project_id: str, old_name: str, new_name: str) -> None:
+    if old_name == new_name:
+        return
+    now = int(time.time())
+    with _connect(db_path) as conn:
+        c = conn.cursor()
+        exists = c.execute(
+            "SELECT 1 FROM project_groups WHERE project_id=? AND group_name=?",
+            (project_id, new_name),
+        ).fetchone()
+        if exists:
+            raise ValueError("Target feature group name already exists")
+        c.execute(
+            "UPDATE project_groups SET group_name=?, updated_at=? WHERE project_id=? AND group_name=?",
+            (new_name, now, project_id, old_name),
+        )
+        c.execute(
+            "UPDATE extractions SET profile=? WHERE project_id=? AND profile=?",
+            (new_name, project_id, old_name),
+        )
+        conn.commit()
 
 
 def delete_project_group(db_path: str, project_id: str, group_name: str) -> None:
     with _connect(db_path) as conn:
         conn.execute("DELETE FROM project_groups WHERE project_id=? AND group_name=?", (project_id, group_name))
         conn.commit()
-
-

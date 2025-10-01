@@ -24,10 +24,12 @@ The application is organized into three main layers:
 
 ## Key Components
 
-### Streamlit App (`app.py`)
-- Loads environment configuration and checks external connectivity before rendering the UI.【F:app.py†L1-L52】
-- Initializes the SQLite database and exposes settings via the sidebar, including project selection, creation, and analytics toggles.【F:app.py†L54-L208】【F:app.py†L400-L478】
-- Provides tabs for managing papers, running extractions, viewing analytics, and configuring project details. Paper uploads are stored under each project's folder and deduplicated using PDF SHA-256 hashes.【F:app.py†L210-L360】
+- Loads environment configuration and checks external connectivity before rendering the UI. The read-only preset in `config/default_global_models.json` is copied into `data/config/global_models.json` on first start; all later edits happen in that generated copy.【F:app.py†L1-L120】
+- Initializes the SQLite database and exposes settings via the sidebar, including project selection, creation, and global settings access.【F:app.py†L54-L208】【F:app.py†L320-L400】
+- Provides tabs for managing papers, running extractions, viewing analytics, and configuring project details. Paper uploads are stored under each project's folder and deduplicated using PDF SHA-256 hashes.【F:app.py†L430-L600】
+- The **Project Settings** tab exposes editable metadata (name, default model, notes) and lets users swap in updated codebooks/prompts for each feature group without touching the template directory. File locations are surfaced for quick navigation.【F:app.py†L1040-L1120】
+- Includes a one-click “Reset Workspace” action in the sidebar to wipe local projects, databases, and outputs for fresh testing.【F:app.py†L320-L400】
+- Renders analytics in a Zotero-style table: filter by feature group, toggle selection mode, copy individual BibTeX entries, or export the chosen subset in bulk.【F:app.py†L760-L990】
 
 ### Database Utilities (`utils/db.py`)
 - Creates tables for papers, projects, attribute groups, and extraction logs, and applies lightweight migrations when the schema evolves.【F:utils/db.py†L1-L122】
@@ -41,9 +43,8 @@ The application is organized into three main layers:
 ### Data Schema Helpers (`utils/schemas.py`)
 - Defines the `FieldEvidence` model and helper functions that flatten structured responses into CSV rows and expand them into per-field evidence logs for downstream auditing.【F:utils/schemas.py†L1-L22】
 
-### Configuration (`config/codebook.yaml` & `prompts/extract.j2`)
-- The YAML codebook lists all enumerations and fields required for extraction, aligning LLM outputs with consistent tokens and value types.【F:config/codebook.yaml†L1-L120】
-- The Jinja2 template outlines extraction instructions, prompt structure, and formatting rules enforced during LLM calls.【F:prompts/extract.j2†L1-L23】
+### Configuration (Uploads)
+- During project creation or feature-group setup, upload the YAML codebook and Jinja2 prompt. The files are stored under `data/projects/<project_id>/feature_groups/<group>/` for later use.
 
 ## Data Flow
 1. **Project Setup:** Users create a project via the Streamlit form, optionally uploading custom codebooks and prompt templates. The app stores the configuration paths in the database and scaffolds directories under `data/projects/<project_id>/`.【F:app.py†L400-L478】

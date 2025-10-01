@@ -1,0 +1,26 @@
+{
+  "models": [
+    {
+      "name": "gpt-4.1",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "",
+      "organization": "",
+      "description": "Starter template entry. Copy on first run; edit the generated copy under data/config/"
+    },
+    {
+      "name": "gpt-4.1-mini",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "",
+      "organization": "",
+      "description": "Starter template entry. Copy on first run; edit the generated copy under data/config/"
+    },
+    {
+      "name": "gpt-4o-audio-preview",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "",
+      "organization": "",
+      "description": "Starter template entry. Copy on first run; edit the generated copy under data/config/"
+    }
+  ],
+  "default_model": "gpt-4.1-mini"
+}

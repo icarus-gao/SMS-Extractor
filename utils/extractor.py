@@ -7,6 +7,11 @@ from pypdf import PdfReader
 from openai import OpenAI, APIConnectionError, APIError, RateLimitError
 from .schemas import FieldEvidence, flatten_values, expand_evidence
 
+try:
+    from docx import Document
+except ImportError:  # pragma: no cover - optional dependency handled at runtime
+    Document = None
+
 def read_yaml(path: str) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -18,6 +23,35 @@ def extract_pdf_text(pdf_path: str, max_pages: int = 100) -> str:
         txt = p.extract_text() or ""
         pages.append(f"[Page {i+1}]\n{txt}")
     return "\n\n".join(pages)
+
+
+def extract_docx_text(docx_path: str) -> str:
+    if Document is None:
+        raise RuntimeError("Install python-docx to enable DOCX parsing")
+    doc = Document(docx_path)
+    lines: List[str] = []
+    for paragraph in doc.paragraphs:
+        text = paragraph.text.strip()
+        if text:
+            lines.append(text)
+    for table in doc.tables:
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+            if cells:
+                lines.append(" | ".join(cells))
+    return "\n".join(lines)
+
+
+def extract_text_from_path(path: str, max_pages: int = 100) -> str:
+    ext = Path(path).suffix.lower()
+    if ext == ".pdf":
+        return extract_pdf_text(path, max_pages=max_pages)
+    if ext == ".docx":
+        return extract_docx_text(path)
+    if ext in {".txt", ".md"}:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+    raise ValueError(f"Unsupported document type: {ext}")
 
 def build_enum_hints(cfg: dict) -> str:
     enums = cfg.get("enums", {})
@@ -42,22 +76,22 @@ def build_enum_hints(cfg: dict) -> str:
             lines.append(f"- {k}: {vals}")
     return "\n".join(lines)
 
-def render_prompt(template_path: str, citation_header: str, field_list: List[str], pdf_text: str, enum_hints: str, citation_format: str | None = None) -> str:
+def render_prompt(template_path: str, citation_header: str, field_list: List[str], document_text: str, enum_hints: str, citation_format: str | None = None) -> str:
     with open(template_path, "r", encoding="utf-8") as f:
         tmpl = Template(f.read())
-    return tmpl.render(citation_header=citation_header, field_list=field_list, pdf_text=pdf_text, enum_hints=enum_hints, citation_format=citation_format)
+    return tmpl.render(citation_header=citation_header, field_list=field_list, pdf_text=document_text, enum_hints=enum_hints, citation_format=citation_format)
 
 def call_llm(prompt: str, model: str = None) -> Dict[str, Any]:
     model = model or os.getenv("OPENAI_MODEL","gpt-5")
     base_url = os.getenv("OPENAI_BASE_URL")
-    # 支持自定义超时
+    # Allow a custom timeout via environment variables.
     try:
         timeout_s = float(os.getenv("OPENAI_TIMEOUT", "60"))
     except Exception:
         timeout_s = 60.0
     client = OpenAI(base_url=base_url, timeout=timeout_s, max_retries=0)
     last_err = None
-    # temperature 策略：默认不发送（兼容部分兼容端点只接受默认=1）。
+    # Temperature strategy: omit by default to satisfy providers that only accept default=1.
     env_temp = os.getenv("OPENAI_TEMPERATURE", "")
     use_temperature = False
     temperature_value: float | None = None
@@ -66,7 +100,7 @@ def call_llm(prompt: str, model: str = None) -> Dict[str, Any]:
             temperature_value = float(env_temp)
             use_temperature = True
         except Exception:
-            # 非法值则忽略，走不带 temperature 的调用
+            # Ignore invalid values and fall back to a call without temperature.
             use_temperature = False
             temperature_value = None
 
@@ -77,10 +111,10 @@ def call_llm(prompt: str, model: str = None) -> Dict[str, Any]:
                 "model": model,
                 "messages": [{"role":"user","content": prompt}],
             }
-            # 仅当显式设定且未被强制禁用时，才发送 temperature
+            # Only send temperature when explicitly set and not disabled.
             if use_temperature and not force_no_temperature:
                 params["temperature"] = temperature_value
-            # 如果后端支持，可开启 JSON 严格模式（保持注释，避免不兼容端点报错）
+            # If the backend supports it, enable strict JSON mode (commented to avoid incompatibility).
             # params["response_format"] = {"type":"json_object"}
 
             resp = client.chat.completions.create(**params)
@@ -98,7 +132,7 @@ def call_llm(prompt: str, model: str = None) -> Dict[str, Any]:
             last_err = e
             status = getattr(e, "status_code", None)
             message_text = str(e)
-            # 400 且 temperature 不被支持时，移除 temperature 重试
+            # On HTTP 400 where temperature is unsupported, retry without temperature.
             if status == 400 and ("temperature" in message_text and ("unsupported" in message_text or "unsupported_value" in message_text)):
                 force_no_temperature = True
                 time.sleep(0.5)
@@ -109,14 +143,14 @@ def call_llm(prompt: str, model: str = None) -> Dict[str, Any]:
                 break
         except Exception as e:
             last_err = e
-            # 对可能的超时/读超时进行一次快速重试
+            # Retry quickly on potential timeouts or read timeouts.
             if "timed out" in str(e).lower():
                 time.sleep(2 ** attempt)
                 continue
             break
     raise RuntimeError(f"LLM call failed (network/KEY/BASE_URL?): {last_err}")
 
-def run_extraction(pdf_path: str, citation_header: str, codebook_path: str, prompt_template_path: str, citation_format: str | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def run_extraction(document_path: str, citation_header: str, codebook_path: str, prompt_template_path: str, citation_format: str | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     cfg = read_yaml(codebook_path)
     fields_cfg = cfg.get("fields", [])
     field_names = [f["name"] for f in fields_cfg]
@@ -125,17 +159,17 @@ def run_extraction(pdf_path: str, citation_header: str, codebook_path: str, prom
         max_pages = int(os.getenv("EXTRACT_MAX_PAGES", "100"))
     except:
         max_pages = 100
-    pdf_text = extract_pdf_text(pdf_path, max_pages=max_pages)
-    # 可选字符上限截断，避免提示过长引发超时
+    document_text = extract_text_from_path(document_path, max_pages=max_pages)
+    # Optionally truncate the document to avoid prompts that are too long.
     try:
         max_chars = int(os.getenv("EXTRACT_MAX_CHARS", "0"))
     except Exception:
         max_chars = 0
-    if max_chars and max_chars > 0 and len(pdf_text) > max_chars:
+    if max_chars and max_chars > 0 and len(document_text) > max_chars:
         suffix = "\n\n[TRUNCATED DUE TO EXTRACT_MAX_CHARS]"
-        pdf_text = pdf_text[: max(0, max_chars - len(suffix))] + suffix
+        document_text = document_text[: max(0, max_chars - len(suffix))] + suffix
     enum_hints = build_enum_hints(cfg)
-    prompt = render_prompt(prompt_template_path, citation_header, field_names, pdf_text, enum_hints, citation_format=citation_format)
+    prompt = render_prompt(prompt_template_path, citation_header, field_names, document_text, enum_hints, citation_format=citation_format)
     if os.getenv("MOCK_EXTRACT","false").lower() == "true":
         data = {name: {"value":"NA","evidence":"NA","location":"NA"} for name in field_names}
         return data, {"mock": True, "prompt_tokens": len(prompt.split())}
@@ -144,7 +178,14 @@ def run_extraction(pdf_path: str, citation_header: str, codebook_path: str, prom
         result.setdefault(name, {"value":"NA","evidence":"NA","location":"NA"})
     return result, {"mock": False, "prompt_tokens": len(prompt.split())}
 
-def append_outputs(master_csv: str, evidence_csv: str, paper_id: str, extracted: Dict[str, Any], codebook_path: str):
+def append_outputs(
+    master_csv: str,
+    evidence_csv: str,
+    paper_id: str,
+    extracted: Dict[str, Any],
+    codebook_path: str,
+    raw_dir: Optional[str] = None,
+) -> None:
     os.makedirs(os.path.dirname(master_csv), exist_ok=True)
     os.makedirs(os.path.dirname(evidence_csv), exist_ok=True)
 
@@ -172,10 +213,10 @@ def append_outputs(master_csv: str, evidence_csv: str, paper_id: str, extracted:
     ev.to_csv(evidence_csv, index=False)
 
     # Save raw JSON
-    raw_dir = Path("data/raw")
-    raw_dir.mkdir(parents=True, exist_ok=True)
+    raw_base = Path(raw_dir) if raw_dir else Path("data/raw")
+    raw_base.mkdir(parents=True, exist_ok=True)
     ts = int(time.time())
-    raw_path = raw_dir / f"{paper_id}_{ts}.json"
+    raw_path = raw_base / f"{paper_id}_{ts}.json"
     with open(raw_path, "w", encoding="utf-8") as f:
         json.dump(extracted, f, ensure_ascii=False, indent=2)
 
