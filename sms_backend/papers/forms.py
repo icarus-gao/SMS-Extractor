@@ -15,7 +15,7 @@ class PaperUploadForm(forms.ModelForm):
             'class': 'form-control',
             'placeholder': 'e.g., smith2023machine'
         }),
-        help_text='Unique identifier for this paper (will be used as citation key)'
+        help_text='Unique identifier for this paper (automatically syncs with citation key)'
     )
     
     cite_format = forms.ChoiceField(

@@ -7,6 +7,8 @@ from .views import (
     PaperUpdateView,
     PaperDeleteView,
     PaperPDFView,
+    PaperUploadPDFView,
+    PaperUpdateMetadataView,
     BibTeXImportView,
     PaperListAPIView,
     PaperDetailAPIView,
@@ -23,6 +25,8 @@ urlpatterns = [
     path('<str:paper_id>/edit/', PaperUpdateView.as_view(), name='edit'),
     path('<str:paper_id>/delete/', PaperDeleteView.as_view(), name='delete'),
     path('<str:paper_id>/pdf/', PaperPDFView.as_view(), name='pdf'),
+    path('<str:paper_id>/upload-pdf/', PaperUploadPDFView.as_view(), name='upload-pdf'),
+    path('<str:paper_id>/update-metadata/', PaperUpdateMetadataView.as_view(), name='update-metadata'),
     
     # Legacy API endpoints
     path('api/list/', PaperListAPIView.as_view(), name='api-list'),

@@ -20,18 +20,20 @@
                         <small class="form-text text-muted">Only letters, numbers, hyphens, and underscores</small>
                     </div>
                     <div class="mb-3">
-                        <label for="name" class="form-label">Project Name</label>
-                        <input type="text" class="form-control" id="name" name="name" placeholder="My Research Project">
-                    </div>
-                    <div class="mb-3">
-                        <label for="model" class="form-label">AI Model</label>
-                        <input type="text" class="form-control" id="model" name="model" value="gpt-4">
+                        <label for="name" class="form-label">Project Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required placeholder="My Research Project">
                     </div>
                     <div class="mb-3">
                         <label for="notes" class="form-label">Description</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Brief description of your systematic review project..."></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Create Project</button>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <small>You can configure AI model and other settings after creating the project.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Create Project
+                    </button>
                     <a href="{% url 'dashboard:home' %}" class="btn btn-secondary">Cancel</a>
                 </form>
             </div>

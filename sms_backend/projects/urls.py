@@ -7,6 +7,8 @@ from .views import (
     ProjectDetailHTMLView,
     AddPaperToProjectView,
     RemovePaperFromProjectView,
+    UpdateProjectSettingsView,
+    UploadPaperToProjectView,
 )
 
 app_name = 'projects'
@@ -21,4 +23,6 @@ urlpatterns = [
     path("<str:project_id>/", ProjectDetailHTMLView.as_view(), name="detail"),
     path("<str:project_id>/add-paper/", AddPaperToProjectView.as_view(), name="add-paper"),
     path("<str:project_id>/remove-paper/<str:paper_id>/", RemovePaperFromProjectView.as_view(), name="remove-paper"),
+    path("<str:project_id>/settings/", UpdateProjectSettingsView.as_view(), name="update-settings"),
+    path("<str:project_id>/upload-paper/", UploadPaperToProjectView.as_view(), name="upload-paper"),
 ]

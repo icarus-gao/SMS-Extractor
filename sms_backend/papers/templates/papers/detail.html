@@ -3,6 +3,45 @@
 
 {% block title %}{{ paper.display_title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+    }
+    code {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+    .upload-zone {
+        border: 2px dashed #ccc;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .upload-zone:hover {
+        border-color: #007bff;
+        background: #e7f3ff;
+    }
+    .upload-zone.dragover {
+        border-color: #28a745;
+        background: #d4edda;
+    }
+    .metadata-edit-section {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -71,11 +110,21 @@
                         {% endif %}
                         {% if paper.project %}
                         <tr>
-                            <th>Project:</th>
+                            <th>Associated Project:</th>
                             <td>
-                                <a href="{% url 'dashboard:project_detail' paper.project.id %}">
-                                    {{ paper.project.name }}
+                                <a href="{% url 'projects:detail' paper.project.project_id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-folder2-open me-1"></i>{{ paper.project.name }}
                                 </a>
+                                <small class="text-muted ms-2">({{ paper.project.project_id }})</small>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <th>Associated Project:</th>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-folder-x"></i> Not associated with any project
+                                </span>
                             </td>
                         </tr>
                         {% endif %}
@@ -90,16 +139,135 @@
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle"></i> Available
                                     </span>
+                                    <a href="{% url 'papers:pdf' paper.paper_id %}" target="_blank" class="btn btn-sm btn-success ms-2">
+                                        <i class="bi bi-file-pdf"></i> View PDF
+                                    </a>
                                 {% else %}
-                                    <span class="badge bg-secondary">
-                                        <i class="bi bi-x-circle"></i> Not Available
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-triangle"></i> Not Available
                                     </span>
+                                    <button class="btn btn-sm btn-primary ms-2" onclick="showPdfUpload()">
+                                        <i class="bi bi-upload"></i> Upload PDF
+                                    </button>
                                 {% endif %}
                             </td>
                         </tr>
                     </table>
                 </div>
             </div>
+
+            <!-- Quick PDF Upload (Hidden by default) -->
+            <div id="pdf-upload-section" class="card mb-3" style="display: none;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cloud-upload"></i> Upload PDF
+                        <button class="btn btn-sm btn-outline-light float-end" onclick="hidePdfUpload()">
+                            <i class="bi bi-x"></i> Cancel
+                        </button>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" action="{% url 'papers:upload-pdf' paper.paper_id %}" id="pdf-upload-form">
+                        {% csrf_token %}
+                        <div class="upload-zone" id="upload-zone">
+                            <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: #6c757d;"></i>
+                            <p class="mt-3 mb-2">
+                                <strong>Drop PDF file here or click to browse</strong>
+                            </p>
+                            <p class="text-muted small mb-3">Maximum file size: 50 MB</p>
+                            <input type="file" name="pdf_file" id="pdf-file-input" accept=".pdf" class="d-none" required>
+                            <div id="file-info" class="mt-3" style="display: none;">
+                                <span class="badge bg-success" id="file-name"></span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3 w-100" id="upload-btn" disabled>
+                            <i class="bi bi-upload me-2"></i>Upload PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Metadata Completion Section -->
+            {% if not paper.authors or not paper.year or not paper.journal or not paper.doi %}
+            <div class="card mb-3 border-warning">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h5 class="mb-0 text-warning">
+                        <i class="bi bi-info-circle"></i> Incomplete Metadata
+                        <button class="btn btn-sm btn-outline-warning float-end" onclick="toggleMetadataEdit()">
+                            <i class="bi bi-pencil"></i> Complete Now
+                        </button>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">Some metadata fields are missing. Complete them to improve searchability and citation management.</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% if not paper.authors %}
+                        <span class="badge bg-warning">Missing: Authors</span>
+                        {% endif %}
+                        {% if not paper.year %}
+                        <span class="badge bg-warning">Missing: Year</span>
+                        {% endif %}
+                        {% if not paper.journal %}
+                        <span class="badge bg-warning">Missing: Journal</span>
+                        {% endif %}
+                        {% if not paper.doi %}
+                        <span class="badge bg-warning">Missing: DOI</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Metadata Edit Form (Hidden by default) -->
+                    <div id="metadata-edit-form" class="mt-3" style="display: none;">
+                        <hr>
+                        <form method="post" action="{% url 'papers:update-metadata' paper.paper_id %}">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                {% if not paper.authors %}
+                                <div class="col-md-6">
+                                    <label for="authors" class="form-label">Authors *</label>
+                                    <input type="text" class="form-control" id="authors" name="authors" 
+                                           placeholder="Smith, J., Doe, A." value="{{ paper.authors|default:'' }}">
+                                    <small class="text-muted">Comma-separated list</small>
+                                </div>
+                                {% endif %}
+                                
+                                {% if not paper.year %}
+                                <div class="col-md-6">
+                                    <label for="year" class="form-label">Year *</label>
+                                    <input type="number" class="form-control" id="year" name="year" 
+                                           placeholder="2023" min="1900" max="2100" value="{{ paper.year|default:'' }}">
+                                </div>
+                                {% endif %}
+                                
+                                {% if not paper.journal %}
+                                <div class="col-md-6">
+                                    <label for="journal" class="form-label">Journal/Conference *</label>
+                                    <input type="text" class="form-control" id="journal" name="journal" 
+                                           placeholder="Nature, IEEE, ACM..." value="{{ paper.journal|default:'' }}">
+                                </div>
+                                {% endif %}
+                                
+                                {% if not paper.doi %}
+                                <div class="col-md-6">
+                                    <label for="doi" class="form-label">DOI</label>
+                                    <input type="text" class="form-control" id="doi" name="doi" 
+                                           placeholder="10.1234/example" value="{{ paper.doi|default:'' }}">
+                                </div>
+                                {% endif %}
+                                
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="bi bi-check-circle me-2"></i>Save Metadata
+                                    </button>
+                                    <button type="button" class="btn btn-secondary ms-2" onclick="toggleMetadataEdit()">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- BibTeX Card -->
             {% if paper.bibtex_content %}
@@ -177,24 +345,92 @@
 </div>
 
 <script>
+// Copy BibTeX to clipboard
 function copyBibtex() {
     const bibtexContent = document.getElementById('bibtex-content').textContent;
     navigator.clipboard.writeText(bibtexContent).then(() => {
         alert('BibTeX copied to clipboard!');
     });
 }
-</script>
 
-<style>
-    pre {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.25rem;
-        overflow-x: auto;
+// Show/Hide PDF Upload Section
+function showPdfUpload() {
+    document.getElementById('pdf-upload-section').style.display = 'block';
+    document.getElementById('pdf-upload-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function hidePdfUpload() {
+    document.getElementById('pdf-upload-section').style.display = 'none';
+}
+
+// Toggle Metadata Edit Form
+function toggleMetadataEdit() {
+    const form = document.getElementById('metadata-edit-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+// PDF Upload functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('pdf-file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    
+    if (uploadZone && fileInput) {
+        // Click to select file
+        uploadZone.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // File selected
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+        
+        // Drag and drop
+        uploadZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(file);
+            } else {
+                alert('Please upload a PDF file.');
+            }
+        });
+        
+        function handleFile(file) {
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file.');
+                return;
+            }
+            
+            if (file.size > 50 * 1024 * 1024) { // 50 MB
+                alert('File size exceeds 50 MB limit.');
+                return;
+            }
+            
+            fileName.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)';
+            fileInfo.style.display = 'block';
+            uploadBtn.disabled = false;
+        }
     }
-    code {
-        font-family: 'Courier New', monospace;
-        font-size: 0.9em;
-    }
-</style>
+});
+</script>
 {% endblock %}

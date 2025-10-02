@@ -57,15 +57,13 @@
                 {% endif %}
             </div>
             <div class="col-md-4 text-md-end">
-                <div class="badge bg-light text-dark p-3 mb-2">
+                <div class="badge bg-light text-dark p-3 mb-2 d-block">
                     <i class="bi bi-file-text me-2"></i>
                     <strong>{{ paper_count }}</strong> Papers
                 </div>
-                {% if project.model %}
-                <div class="badge bg-light text-dark p-3">
-                    <i class="bi bi-robot me-2"></i>{{ project.model }}
-                </div>
-                {% endif %}
+                <button class="btn btn-light btn-sm d-block w-100 mb-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="bi bi-gear me-2"></i>Project Settings
+                </button>
             </div>
         </div>
     </div>
@@ -141,17 +139,20 @@
         <!-- Available Papers from Library -->
         <div class="col-lg-5 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="section-header mb-0">
-                        <i class="bi bi-plus-circle me-2"></i>Add Papers ({{ available_count }})
+                        <i class="bi bi-plus-circle me-2"></i>Add Papers
                     </h5>
+                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#uploadPaperModal">
+                        <i class="bi bi-upload me-1"></i>Upload New
+                    </button>
                 </div>
                 <div class="card-body" style="max-height: 600px; overflow-y: auto;">
                     {% if available_papers %}
-                        <p class="small text-muted mb-3">
+                        <div class="alert alert-info py-2 small mb-3">
                             <i class="bi bi-info-circle me-1"></i>
-                            Click a paper to add it to this project
-                        </p>
+                            <strong>{{ available_count }}</strong> papers available from library
+                        </div>
                         <div class="list-group list-group-flush">
                             {% for paper in available_papers %}
                             <form method="post" action="{% url 'projects:add-paper' project.project_id %}" class="mb-2">
@@ -176,11 +177,9 @@
                         </div>
                     {% else %}
                         <div class="text-center py-4">
-                            <i class="bi bi-check-circle" style="font-size: 2rem; color: #28a745;"></i>
-                            <p class="text-muted mt-3 mb-0">All papers from the library are already associated with projects.</p>
-                            <a href="{% url 'papers:upload' %}" class="btn btn-sm btn-outline-primary mt-3">
-                                <i class="bi bi-upload me-2"></i>Upload New Paper
-                            </a>
+                            <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3 mb-2">No unassociated papers in library.</p>
+                            <p class="small text-muted mb-3">Click "Upload New" above to add a paper directly to this project.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -218,5 +217,122 @@
         </div>
     </div>
     {% endif %}
+</div>
+
+<!-- Project Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="settingsModalLabel">
+                    <i class="bi bi-gear me-2"></i>Project Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'projects:update-settings' project.project_id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="model" class="form-label">AI Model</label>
+                        <select class="form-select" id="model" name="model">
+                            <option value="">-- Not configured --</option>
+                            <option value="gpt-4o" {% if project.model == 'gpt-4o' %}selected{% endif %}>GPT-4o</option>
+                            <option value="gpt-4o-mini" {% if project.model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini</option>
+                            <option value="gpt-4-turbo" {% if project.model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
+                            <option value="gpt-4" {% if project.model == 'gpt-4' %}selected{% endif %}>GPT-4</option>
+                            <option value="gpt-3.5-turbo" {% if project.model == 'gpt-3.5-turbo' %}selected{% endif %}>GPT-3.5 Turbo</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Select the AI model to use for this project's extraction and analysis tasks.
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes_edit" class="form-label">Description</label>
+                        <textarea class="form-control" id="notes_edit" name="notes" rows="3">{{ project.notes }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload New Paper Modal -->
+<div class="modal fade" id="uploadPaperModal" tabindex="-1" aria-labelledby="uploadPaperModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadPaperModalLabel">
+                    <i class="bi bi-upload me-2"></i>Upload New Paper to {{ project.name }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'projects:upload-paper' project.project_id %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        This paper will be added to Paper Library and automatically associated with this project.
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="paper_id" class="form-label">Paper ID (Citation Key) *</label>
+                            <input type="text" class="form-control" id="paper_id" name="paper_id" required 
+                                   placeholder="e.g., smith2023machine">
+                            <small class="form-text text-muted">Unique identifier for this paper</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="cite_format" class="form-label">Format</label>
+                            <select class="form-select" id="cite_format" name="cite_format">
+                                <option value="bibtex" selected>BibTeX</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="bibtex_content" class="form-label">BibTeX Entry</label>
+                        <textarea class="form-control font-monospace" id="bibtex_content" name="bibtex_content" rows="8" 
+                                  placeholder="@article{smith2023machine,&#10;  title={Machine Learning Applications},&#10;  author={Smith, John},&#10;  year={2023},&#10;  ...&#10;}"></textarea>
+                        <small class="form-text text-muted">Paste BibTeX from Google Scholar, etc. Metadata will be auto-extracted.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="pdf_file" class="form-label">PDF File (Optional)</label>
+                        <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf">
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title (Optional - auto-filled from BibTeX)</label>
+                        <input type="text" class="form-control" id="title" name="title">
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="authors" class="form-label">Authors</label>
+                            <input type="text" class="form-control" id="authors" name="authors">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="year" class="form-label">Year</label>
+                            <input type="number" class="form-control" id="year" name="year">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-upload me-2"></i>Upload & Add to Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

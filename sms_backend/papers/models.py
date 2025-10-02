@@ -64,6 +64,23 @@ class Paper(models.Model):
         if self.bibtex_content and not self.citation_key:
             self.citation_key = self.extract_citation_key_from_bibtex()
         
+        # Sync citation_key with paper_id (they should always match)
+        # When paper_id changes, update citation_key and BibTeX
+        if self.citation_key and self.citation_key != self.paper_id:
+            # Update BibTeX content with new citation key
+            if self.bibtex_content:
+                old_key = self.citation_key
+                new_key = self.paper_id
+                # Replace old key with new key in BibTeX
+                old_pattern = r'(@\w+\{)' + re.escape(old_key)
+                self.bibtex_content = re.sub(old_pattern, r'\1' + new_key, self.bibtex_content)
+            # Update citation_key to match paper_id
+            self.citation_key = self.paper_id
+        
+        # If no citation_key yet, use paper_id
+        if not self.citation_key:
+            self.citation_key = self.paper_id
+        
         # Parse BibTeX to extract metadata
         if self.bibtex_content and self.cite_format == 'bibtex':
             self.parse_bibtex_metadata()

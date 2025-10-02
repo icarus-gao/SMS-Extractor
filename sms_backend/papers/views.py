@@ -7,6 +7,7 @@ from django.urls import reverse_lazy
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 import re
+import time
 
 from .models import Paper
 from .forms import PaperUploadForm, PaperSearchForm, BibTeXImportForm
@@ -112,7 +113,52 @@ class PaperUpdateView(UpdateView):
         return reverse_lazy('papers:detail', kwargs={'paper_id': self.object.paper_id})
     
     def form_valid(self, form):
-        messages.success(self.request, 'Paper updated successfully!')
+        old_paper_id = self.object.paper_id
+        new_paper_id = form.cleaned_data.get('paper_id')
+        
+        # If paper_id changed, we need to create a new record and delete the old one
+        # because paper_id is the primary key
+        if old_paper_id != new_paper_id:
+            old_paper = self.object
+            
+            # Create new paper with new paper_id
+            new_paper = form.save(commit=False)
+            new_paper.paper_id = new_paper_id
+            new_paper.citation_key = new_paper_id  # Sync citation_key with paper_id
+            
+            # Copy the PDF file if it exists
+            if old_paper.pdf_file:
+                # Copy file content to new paper
+                old_paper.pdf_file.open()
+                new_paper.pdf_file.save(
+                    old_paper.pdf_file.name,
+                    old_paper.pdf_file,
+                    save=False
+                )
+                old_paper.pdf_file.close()
+            
+            # Save new paper
+            new_paper.save()
+            
+            # Copy extractions to new paper
+            for extraction in old_paper.extraction_set.all():
+                extraction.paper = new_paper
+                extraction.save()
+            
+            # Delete old paper
+            old_paper.delete()
+            
+            # Update self.object to point to new paper
+            self.object = new_paper
+            
+            messages.success(
+                self.request, 
+                f'Paper ID updated from "{old_paper_id}" to "{new_paper_id}". Citation key and BibTeX have been synchronized.'
+            )
+        else:
+            # Normal update - citation_key will be synced automatically in model's save()
+            messages.success(self.request, 'Paper updated successfully!')
+        
         return super().form_valid(form)
 
 
@@ -225,6 +271,74 @@ class PaperListAPIView(View):
             "updated_at",
         )
         return JsonResponse({"papers": list(qs)})
+
+
+class PaperUploadPDFView(View):
+    """Quick PDF upload for existing paper"""
+    def post(self, request, paper_id):
+        paper = get_object_or_404(Paper, paper_id=paper_id)
+        
+        if 'pdf_file' not in request.FILES:
+            messages.error(request, 'No PDF file provided.')
+            return redirect('papers:detail', paper_id=paper_id)
+        
+        pdf_file = request.FILES['pdf_file']
+        
+        # Validate file type
+        if not pdf_file.name.endswith('.pdf'):
+            messages.error(request, 'Please upload a PDF file.')
+            return redirect('papers:detail', paper_id=paper_id)
+        
+        # Validate file size (50 MB)
+        if pdf_file.size > 50 * 1024 * 1024:
+            messages.error(request, 'File size exceeds 50 MB limit.')
+            return redirect('papers:detail', paper_id=paper_id)
+        
+        # Save PDF
+        paper.pdf_file = pdf_file
+        paper.updated_at = int(time.time() * 1000)
+        paper.save()
+        
+        messages.success(request, f'PDF uploaded successfully for "{paper.citation_key or paper.paper_id}"!')
+        return redirect('papers:detail', paper_id=paper_id)
+
+
+class PaperUpdateMetadataView(View):
+    """Quick metadata update for existing paper"""
+    def post(self, request, paper_id):
+        paper = get_object_or_404(Paper, paper_id=paper_id)
+        
+        # Update fields if provided
+        updated_fields = []
+        
+        if 'authors' in request.POST and request.POST['authors'].strip():
+            paper.authors = request.POST['authors'].strip()
+            updated_fields.append('Authors')
+        
+        if 'year' in request.POST and request.POST['year'].strip():
+            try:
+                paper.year = int(request.POST['year'])
+                updated_fields.append('Year')
+            except ValueError:
+                messages.error(request, 'Invalid year value.')
+                return redirect('papers:detail', paper_id=paper_id)
+        
+        if 'journal' in request.POST and request.POST['journal'].strip():
+            paper.journal = request.POST['journal'].strip()
+            updated_fields.append('Journal')
+        
+        if 'doi' in request.POST and request.POST['doi'].strip():
+            paper.doi = request.POST['doi'].strip()
+            updated_fields.append('DOI')
+        
+        if updated_fields:
+            paper.updated_at = int(time.time() * 1000)
+            paper.save()
+            messages.success(request, f'Updated: {", ".join(updated_fields)}')
+        else:
+            messages.warning(request, 'No fields were updated.')
+        
+        return redirect('papers:detail', paper_id=paper_id)
 
 
 class PaperDetailAPIView(View):

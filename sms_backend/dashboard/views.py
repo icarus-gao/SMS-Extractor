@@ -64,9 +64,14 @@ def project_list(request):
 def project_detail(request, project_id):
     """Project detail view"""
     project = get_object_or_404(Project, project_id=project_id)
-    papers = Paper.objects.filter(project=project).order_by('-created_at')
+    papers = Paper.objects.filter(project=project).order_by('-updated_at')
     groups = ProjectGroup.objects.filter(project=project).order_by('group_name')
     extractions = Extraction.objects.filter(project=project).order_by('-created_at')[:10]
+    
+    # Get papers available in library (not associated with any project or other projects)
+    available_papers = Paper.objects.filter(
+        Q(project__isnull=True) | ~Q(project=project)
+    ).order_by('-updated_at')[:50]  # Limit to recent 50
     
     # Get project stats
     stats = get_project_stats(project_id)
@@ -76,6 +81,7 @@ def project_detail(request, project_id):
         'papers': papers,
         'groups': groups,
         'extractions': extractions,
+        'available_papers': available_papers,
         'stats': stats,
     }
     return render(request, 'dashboard/project/detail.html', context)
@@ -86,7 +92,6 @@ def project_create(request):
     if request.method == 'POST':
         project_id = request.POST.get('project_id', '').strip()
         name = request.POST.get('name', '').strip()
-        model = request.POST.get('model', 'gpt-4').strip()
         notes = request.POST.get('notes', '').strip()
         
         # Validation
@@ -94,15 +99,19 @@ def project_create(request):
             messages.error(request, 'Project ID is required')
             return render(request, 'dashboard/project/create.html')
         
+        if not name:
+            messages.error(request, 'Project name is required')
+            return render(request, 'dashboard/project/create.html')
+        
         if Project.objects.filter(project_id=project_id).exists():
             messages.error(request, f'Project ID "{project_id}" already exists')
             return render(request, 'dashboard/project/create.html')
         
-        # Create project
+        # Create project (no model specified initially)
         project = Project.objects.create(
             project_id=project_id,
-            name=name or project_id,
-            model=model,
+            name=name,
+            model=None,  # Will be set later in project settings
             notes=notes,
         )
         
@@ -110,23 +119,24 @@ def project_create(request):
         project_dir = os.path.join('data', 'projects', project_id)
         os.makedirs(project_dir, exist_ok=True)
         
-        messages.success(request, f'Project "{project.name}" created successfully!')
-        return redirect('dashboard:project-detail', project_id=project_id)
+        messages.success(request, f'Project "{project.name}" created successfully! You can now add papers and configure settings.')
+        return redirect('projects:detail', project_id=project_id)  # Redirect to new project detail page
     
     return render(request, 'dashboard/project/create.html')
 
 
 def project_update(request, project_id):
-    """Update project"""
+    """Update project settings"""
     project = get_object_or_404(Project, project_id=project_id)
     
     if request.method == 'POST':
         project.name = request.POST.get('name', '').strip()
-        project.model = request.POST.get('model', 'gpt-4').strip()
+        model = request.POST.get('model', '').strip()
+        project.model = model if model else None
         project.notes = request.POST.get('notes', '').strip()
         project.save()
         
-        messages.success(request, f'Project "{project.name}" updated successfully!')
+        messages.success(request, f'Project "{project.name}" settings updated successfully!')
         return redirect('dashboard:project-detail', project_id=project_id)
     
     context = {'project': project}
@@ -135,19 +145,24 @@ def project_update(request, project_id):
 
 @require_http_methods(["POST"])
 def project_delete(request, project_id):
-    """Delete project"""
+    """Delete project (papers remain in library)"""
     project = get_object_or_404(Project, project_id=project_id)
     project_name = project.name
     
-    # Delete related data
-    Paper.objects.filter(project=project).delete()
+    # Unassociate papers (don't delete them - they remain in library)
+    Paper.objects.filter(project=project).update(project=None)
+    
+    # Delete feature groups and their extractions
     ProjectGroup.objects.filter(project=project).delete()
     Extraction.objects.filter(project=project).delete()
     
     # Delete project
     project.delete()
     
-    messages.success(request, f'Project "{project_name}" deleted successfully!')
+    messages.success(
+        request, 
+        f'Project "{project_name}" deleted successfully! Papers remain in Paper Library.'
+    )
     return redirect('dashboard:project-list')
 
 

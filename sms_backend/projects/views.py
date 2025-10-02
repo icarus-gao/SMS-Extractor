@@ -119,3 +119,62 @@ class RemovePaperFromProjectView(View):
             messages.success(request, f'Paper "{paper.citation_key or paper.paper_id}" removed from project.')
         
         return redirect('projects:detail', project_id=project_id)
+
+
+class UpdateProjectSettingsView(View):
+    """Update project settings (model, description, etc.)"""
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, project_id=project_id)
+        
+        model = request.POST.get('model', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        
+        # Update fields
+        project.model = model if model else None
+        project.notes = notes
+        project.save()
+        
+        messages.success(request, 'Project settings updated successfully!')
+        return redirect('projects:detail', project_id=project_id)
+
+
+class UploadPaperToProjectView(View):
+    """Upload a new paper and automatically associate it with the project"""
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, project_id=project_id)
+        
+        # Get form data
+        paper_id = request.POST.get('paper_id', '').strip()
+        cite_format = request.POST.get('cite_format', 'bibtex')
+        bibtex_content = request.POST.get('bibtex_content', '').strip()
+        title = request.POST.get('title', '').strip()
+        authors = request.POST.get('authors', '').strip()
+        year = request.POST.get('year', '').strip()
+        pdf_file = request.FILES.get('pdf_file')
+        
+        # Validation
+        if not paper_id:
+            messages.error(request, 'Paper ID is required.')
+            return redirect('projects:detail', project_id=project_id)
+        
+        if Paper.objects.filter(paper_id=paper_id).exists():
+            messages.error(request, f'Paper ID "{paper_id}" already exists. Please use a unique ID or add the existing paper from the library.')
+            return redirect('projects:detail', project_id=project_id)
+        
+        # Create paper with project association
+        paper = Paper.objects.create(
+            paper_id=paper_id,
+            cite_format=cite_format,
+            bibtex_content=bibtex_content,
+            title=title,
+            authors=authors,
+            year=int(year) if year else None,
+            pdf_file=pdf_file,
+            project=project  # Automatically associate with project
+        )
+        
+        messages.success(
+            request, 
+            f'Paper "{paper.citation_key or paper.paper_id}" uploaded and added to project successfully!'
+        )
+        return redirect('projects:detail', project_id=project_id)
