@@ -480,6 +480,9 @@ else:
     # Project selected - show project interface
     st.subheader(f"📁 {selected_project['name']}")
     st.caption(f"Project ID: {selected_project['project_id']}")
+    
+    # Load global configuration for this project view
+    global_conf = st.session_state.get('global_model_configs', load_global_model_configs())
 
     with _connect(db_path) as conn:
         c = conn.cursor()

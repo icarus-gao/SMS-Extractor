@@ -351,11 +351,29 @@ def get_project(db_path: str, project_id: str) -> Optional[Dict[str, Any]]:
 
 
 def delete_project(db_path: str, project_id: str) -> None:
+    """Delete a project including database records and filesystem directory"""
+    import shutil
+    
+    # Delete from database (cascade delete related records)
     with _connect(db_path) as conn:
+        # Delete papers associated with this project
+        conn.execute("DELETE FROM papers WHERE project_id=?", (project_id,))
+        # Delete extractions
         conn.execute("DELETE FROM extractions WHERE project_id=?", (project_id,))
+        # Delete project groups
         conn.execute("DELETE FROM project_groups WHERE project_id=?", (project_id,))
+        # Delete the project itself
         conn.execute("DELETE FROM projects WHERE project_id=?", (project_id,))
         conn.commit()
+    
+    # Delete project directory from filesystem
+    project_path = Path(db_path).parent / "projects" / project_id
+    if project_path.exists():
+        try:
+            shutil.rmtree(project_path)
+        except Exception as e:
+            # Log error but don't fail - database deletion succeeded
+            print(f"Warning: Could not delete project directory {project_path}: {e}")
 
 
 # Project groups CRUD

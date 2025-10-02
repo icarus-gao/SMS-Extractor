@@ -312,11 +312,9 @@ def render_settings_tab(selected_project: Dict[str, Any], db_path: str, global_c
         with confirm_col:
             if st.button("Confirm Delete", key=f"confirm_delete_project_{selected_project['project_id']}"):
                 try:
+                    # delete_project now handles both database and filesystem cleanup
                     delete_project(db_path, selected_project['project_id'])
-                    project_path = Path(f"data/projects/{selected_project['project_id']}")
-                    if project_path.exists():
-                        shutil.rmtree(project_path, ignore_errors=True)
-                    st.success("Project deleted")
+                    st.success("Project deleted successfully")
                     st.session_state.pop(delete_project_state_key, None)
                     trigger_rerun()
                 except Exception as exc:
