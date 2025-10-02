@@ -1,0 +1,222 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}{{ project.name }} - SMS Extractor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .project-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .paper-card {
+        transition: all 0.2s ease;
+        border-left: 4px solid #667eea;
+    }
+    .paper-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateX(5px);
+    }
+    .available-paper {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 4px solid #28a745;
+    }
+    .available-paper:hover {
+        background-color: #f8f9fa;
+        transform: translateX(5px);
+    }
+    .section-header {
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Back Button -->
+    <a href="{% url 'projects:list' %}" class="btn btn-link mb-3">
+        <i class="bi bi-arrow-left me-2"></i>Back to Projects
+    </a>
+
+    <!-- Project Header -->
+    <div class="project-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="bi bi-folder2-open me-2"></i>{{ project.name }}
+                </h2>
+                <p class="mb-3 opacity-75">{{ project.project_id }}</p>
+                {% if project.notes %}
+                <p class="mb-0">{{ project.notes }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="badge bg-light text-dark p-3 mb-2">
+                    <i class="bi bi-file-text me-2"></i>
+                    <strong>{{ paper_count }}</strong> Papers
+                </div>
+                {% if project.model %}
+                <div class="badge bg-light text-dark p-3">
+                    <i class="bi bi-robot me-2"></i>{{ project.model }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Associated Papers -->
+        <div class="col-lg-7 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="section-header mb-0">
+                        <i class="bi bi-files me-2"></i>Associated Papers ({{ paper_count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if papers %}
+                        <div class="list-group list-group-flush">
+                            {% for paper in papers %}
+                            <div class="list-group-item paper-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'papers:detail' paper.paper_id %}" class="text-decoration-none">
+                                                {{ paper.citation_key|default:paper.paper_id }}
+                                            </a>
+                                        </h6>
+                                        <p class="mb-1 text-muted small">
+                                            {{ paper.title|truncatewords:15 }}
+                                        </p>
+                                        <div class="small text-muted">
+                                            {% if paper.authors %}
+                                            <i class="bi bi-person me-1"></i>{{ paper.authors|truncatewords:5 }}
+                                            {% endif %}
+                                            {% if paper.year %}
+                                            <span class="ms-2"><i class="bi bi-calendar me-1"></i>{{ paper.year }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <form method="post" action="{% url 'projects:remove-paper' project.project_id paper.paper_id %}" class="d-inline" onsubmit="return confirm('Remove this paper from project?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove from project">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </form>
+                                        <a href="{% url 'papers:detail' paper.paper_id %}" class="btn btn-sm btn-outline-primary ms-1" title="View details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No papers associated with this project yet.</p>
+                            <p class="small text-muted">Add papers from the Paper Library on the right →</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Papers from Library -->
+        <div class="col-lg-5 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="section-header mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Add Papers ({{ available_count }})
+                    </h5>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    {% if available_papers %}
+                        <p class="small text-muted mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Click a paper to add it to this project
+                        </p>
+                        <div class="list-group list-group-flush">
+                            {% for paper in available_papers %}
+                            <form method="post" action="{% url 'projects:add-paper' project.project_id %}" class="mb-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="paper_id" value="{{ paper.paper_id }}">
+                                <button type="submit" class="list-group-item list-group-item-action available-paper border-0 text-start w-100">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-plus-circle text-success me-2"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 small">{{ paper.citation_key|default:paper.paper_id }}</h6>
+                                            <p class="mb-0 text-muted" style="font-size: 0.8rem;">
+                                                {{ paper.title|truncatewords:10 }}
+                                            </p>
+                                            {% if paper.year %}
+                                            <span class="badge bg-secondary mt-1">{{ paper.year }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-check-circle" style="font-size: 2rem; color: #28a745;"></i>
+                            <p class="text-muted mt-3 mb-0">All papers from the library are already associated with projects.</p>
+                            <a href="{% url 'papers:upload' %}" class="btn btn-sm btn-outline-primary mt-3">
+                                <i class="bi bi-upload me-2"></i>Upload New Paper
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Groups Section (Optional) -->
+    {% if feature_groups %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="section-header mb-0">
+                        <i class="bi bi-grid me-2"></i>Feature Groups
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for group in feature_groups %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-start border-4 border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ group.group_name }}</h6>
+                                    {% if group.description %}
+                                    <p class="card-text small text-muted">{{ group.description|truncatewords:15 }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

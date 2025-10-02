@@ -15,7 +15,7 @@ class Paper(models.Model):
     ]
     
     paper_id = models.CharField(max_length=255, primary_key=True)
-    project = models.ForeignKey(Project, related_name="papers", on_delete=models.CASCADE, blank=True, null=True)
+    project = models.ForeignKey(Project, related_name="papers", on_delete=models.SET_NULL, blank=True, null=True)
     title = models.TextField(blank=True, null=True)
     citation = models.TextField(blank=True, null=True)
     citation_format = models.CharField(max_length=64, blank=True, null=True)
