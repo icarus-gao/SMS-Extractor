@@ -1,0 +1,246 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Paper Library{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-3">
+                <i class="bi bi-book"></i> Paper Library
+            </h1>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Papers</h5>
+                            <h2>{{ total_papers }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">With PDF</h5>
+                            <h2>{{ papers_with_pdf }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Projects</h5>
+                            <h2>{{ total_projects }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">This Page</h5>
+                            <h2>{{ page_obj.paginator.count }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="btn-toolbar justify-content-between" role="toolbar">
+                <div class="btn-group">
+                    <a href="{% url 'papers:upload' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Paper
+                    </a>
+                    <a href="{% url 'papers:import' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-file-earmark-arrow-up"></i> Import BibTeX
+                    </a>
+                </div>
+                
+                <!-- Sort dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                            id="sortDropdown" data-bs-toggle="dropdown">
+                        <i class="bi bi-sort-down"></i> Sort
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?sort=-updated_at&q={{ query }}">Recent First</a></li>
+                        <li><a class="dropdown-item" href="?sort=updated_at&q={{ query }}">Oldest First</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="?sort=citation_key&q={{ query }}">Citation Key (A-Z)</a></li>
+                        <li><a class="dropdown-item" href="?sort=-citation_key&q={{ query }}">Citation Key (Z-A)</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="?sort=-year&q={{ query }}">Year (Newest)</a></li>
+                        <li><a class="dropdown-item" href="?sort=year&q={{ query }}">Year (Oldest)</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <form method="get" class="row g-2">
+                <div class="col-md-8">
+                    <input type="text" name="q" class="form-control" 
+                           placeholder="Search by citation key, title, author, or DOI..." 
+                           value="{{ query }}" autofocus>
+                </div>
+                <div class="col-md-2">
+                    {{ search_form.year }}
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Paper List (Zotero-style) -->
+    <div class="row">
+        <div class="col-12">
+            {% if papers %}
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Citation Key</th>
+                                <th>Title</th>
+                                <th>Author(s)</th>
+                                <th>Year</th>
+                                <th>Journal</th>
+                                <th>Project</th>
+                                <th style="width: 150px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paper in papers %}
+                            <tr>
+                                <td class="text-center">
+                                    {% if paper.pdf_file %}
+                                        <i class="bi bi-file-pdf-fill text-danger" title="Has PDF"></i>
+                                    {% else %}
+                                        <i class="bi bi-file-text text-secondary" title="No PDF"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'papers:detail' paper.paper_id %}" class="text-decoration-none">
+                                        <strong>{{ paper.citation_key|default:paper.paper_id }}</strong>
+                                    </a>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 300px;" title="{{ paper.title }}">
+                                        {{ paper.display_title }}
+                                    </div>
+                                </td>
+                                <td>{{ paper.display_authors }}</td>
+                                <td>{{ paper.year|default:"—" }}</td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 200px;" title="{{ paper.journal }}">
+                                        {{ paper.journal|default:"—" }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if paper.project %}
+                                        <span class="badge bg-info">{{ paper.project.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'papers:detail' paper.paper_id %}" 
+                                           class="btn btn-outline-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if paper.pdf_file %}
+                                        <a href="{% url 'papers:pdf' paper.paper_id %}" 
+                                           class="btn btn-outline-success" title="View PDF" target="_blank">
+                                            <i class="bi bi-file-pdf"></i>
+                                        </a>
+                                        {% endif %}
+                                        <a href="{% url 'papers:edit' paper.paper_id %}" 
+                                           class="btn btn-outline-warning" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'papers:delete' paper.paper_id %}" 
+                                           class="btn btn-outline-danger" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1&q={{ query }}&sort={{ current_sort }}">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&sort={{ current_sort }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&sort={{ current_sort }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ query }}&sort={{ current_sort }}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="alert alert-info">
+                <h4><i class="bi bi-info-circle"></i> No Papers Found</h4>
+                {% if query %}
+                    <p>No papers match your search "<strong>{{ query }}</strong>".</p>
+                    <a href="{% url 'papers:library' %}" class="btn btn-sm btn-primary">Clear Search</a>
+                {% else %}
+                    <p>Your paper library is empty. Start by adding papers!</p>
+                    <a href="{% url 'papers:upload' %}" class="btn btn-primary">Add Your First Paper</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+    .text-truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+{% endblock %}

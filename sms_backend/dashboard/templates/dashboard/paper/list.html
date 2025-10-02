@@ -1,0 +1,64 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Papers - {{ project.name }}{% endblock %}
+{% block page_title %}Papers in {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:project-detail' project.project_id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Project
+    </a>
+    <a href="{% url 'dashboard:paper-upload' project.project_id %}" class="btn btn-primary">
+        <i class="bi bi-upload"></i> Upload Papers
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Papers</h5>
+    </div>
+    <div class="card-body">
+        {% if papers %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Paper ID</th>
+                        <th>PDF Path</th>
+                        <th>Uploaded</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for paper in papers %}
+                    <tr>
+                        <td>{{ paper.paper_id }}</td>
+                        <td><small class="text-muted">{{ paper.pdf_path|truncatechars:50 }}</small></td>
+                        <td>{{ paper.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <form method="post" action="{% url 'dashboard:paper-delete' project.project_id paper.paper_id %}" 
+                                  class="d-inline" onsubmit="return confirm('Delete this paper?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-pdf text-muted" style="font-size: 4rem;"></i>
+            <h4 class="mt-3">No Papers Yet</h4>
+            <p class="text-muted">Upload PDF papers to get started with extraction.</p>
+            <a href="{% url 'dashboard:paper-upload' project.project_id %}" class="btn btn-primary">
+                <i class="bi bi-upload"></i> Upload Papers
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

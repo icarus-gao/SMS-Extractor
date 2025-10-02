@@ -1,0 +1,40 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Edit {{ project.name }} - SMS Extractor{% endblock %}
+{% block page_title %}Edit Project{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Edit Project: {{ project.name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Project ID</label>
+                        <input type="text" class="form-control" value="{{ project.project_id }}" disabled>
+                        <small class="form-text text-muted">Project ID cannot be changed</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ project.name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="model" class="form-label">AI Model</label>
+                        <input type="text" class="form-control" id="model" name="model" value="{{ project.model }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Description</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3">{{ project.notes }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{% url 'dashboard:project-detail' project.project_id %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

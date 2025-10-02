@@ -1,21 +1,39 @@
-# dotenv
+# Environment variables
 .env
 .env.*
 !.env.example
 
-# streamlit secrets
-.streamlit/secrets.toml
-
-# data outputs
-data/master.csv
-data/evidence_log.csv
-data/uploads/
-data/raw/
-
-# Python cache / IDE
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.bak
+*.tmp
+*.temp

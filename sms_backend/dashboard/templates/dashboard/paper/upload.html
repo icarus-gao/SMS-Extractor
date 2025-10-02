@@ -1,0 +1,31 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Upload Papers - {{ project.name }}{% endblock %}
+{% block page_title %}Upload Papers{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Upload Papers to: {{ project.name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="pdf_files" class="form-label">Select PDF Files</label>
+                        <input type="file" class="form-control" id="pdf_files" name="pdf_files" 
+                               accept=".pdf" multiple required>
+                        <small class="form-text text-muted">You can select multiple PDF files</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload
+                    </button>
+                    <a href="{% url 'dashboard:project-detail' project.project_id %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

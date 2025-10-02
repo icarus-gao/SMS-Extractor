@@ -1,0 +1,37 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Projects - SMS Extractor{% endblock %}
+{% block page_title %}All Projects{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Projects</h2>
+    <a href="{% url 'dashboard:project-create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Project
+    </a>
+</div>
+
+{% if projects %}
+<div class="row">
+    {% for project in projects %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ project.name }}</h5>
+                <p class="text-muted small">{{ project.project_id }}</p>
+                <p class="card-text">{{ project.notes|truncatewords:20|default:"No description" }}</p>
+                <p class="small text-muted">Model: {{ project.model }}</p>
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{% url 'dashboard:project-detail' project.project_id %}" class="btn btn-sm btn-primary">
+                    View Details
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No projects found. Create your first project!</div>
+{% endif %}
+{% endblock %}

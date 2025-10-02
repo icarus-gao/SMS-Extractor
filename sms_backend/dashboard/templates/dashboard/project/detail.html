@@ -1,0 +1,132 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ project.name }} - SMS Extractor{% endblock %}
+{% block page_title %}Project: {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h3>{{ project.name }}</h3>
+                <p class="text-muted">{{ project.project_id }}</p>
+                <p>{{ project.notes|default:"No description" }}</p>
+                <p><strong>Model:</strong> {{ project.model }}</p>
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{% url 'dashboard:project-update' project.project_id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <form method="post" action="{% url 'dashboard:project-delete' project.project_id %}" class="d-inline" 
+                      onsubmit="return confirm('Are you sure?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5>Quick Stats</h5>
+                <p><strong>Papers:</strong> {{ papers.count }}</p>
+                <p><strong>Groups:</strong> {{ groups.count }}</p>
+                <p><strong>Extractions:</strong> {{ extractions.count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <h5 class="mb-0">Papers</h5>
+                <a href="{% url 'dashboard:paper-upload' project.project_id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-upload"></i> Upload
+                </a>
+            </div>
+            <div class="card-body">
+                {% if papers %}
+                <div class="list-group">
+                    {% for paper in papers %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ paper.paper_id }}</span>
+                        <form method="post" action="{% url 'dashboard:paper-delete' project.project_id paper.paper_id %}" 
+                              class="d-inline" onsubmit="return confirm('Delete this paper?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No papers uploaded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <h5 class="mb-0">Feature Groups</h5>
+                <a href="{% url 'dashboard:group-create' project.project_id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Add
+                </a>
+            </div>
+            <div class="card-body">
+                {% if groups %}
+                <div class="list-group">
+                    {% for group in groups %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ group.group_name }}</strong>
+                            <br><small class="text-muted">{{ group.description|truncatewords:10 }}</small>
+                        </div>
+                        <div>
+                            <a href="{% url 'dashboard:group-update' project.project_id group.id %}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'dashboard:group-delete' project.project_id group.id %}" 
+                                  class="d-inline" onsubmit="return confirm('Delete this group?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No feature groups created yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'dashboard:extraction-run' project.project_id %}" class="btn btn-success">
+                    <i class="bi bi-play-circle"></i> Run Extraction
+                </a>
+                <a href="{% url 'dashboard:project-analytics' project.project_id %}" class="btn btn-info">
+                    <i class="bi bi-bar-chart"></i> View Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

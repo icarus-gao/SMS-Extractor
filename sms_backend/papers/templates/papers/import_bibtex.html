@@ -1,0 +1,91 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Import BibTeX{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-file-earmark-arrow-up"></i> Import Papers from BibTeX File</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Bulk Import:</strong> Upload a .bib file containing multiple BibTeX entries.
+                            Each entry will be imported as a separate paper.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.bibtex_file.id_for_label }}" class="form-label">
+                                BibTeX File (.bib) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.bibtex_file }}
+                            {% if form.bibtex_file.errors %}
+                                <div class="text-danger small">{{ form.bibtex_file.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">{{ form.bibtex_file.help_text }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.project.id_for_label }}" class="form-label">
+                                Assign All Papers to Project (Optional)
+                            </label>
+                            {{ form.project }}
+                            {% if form.project.errors %}
+                                <div class="text-danger small">{{ form.project.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">{{ form.project.help_text }}</div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'papers:library' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-info">
+                                <i class="bi bi-upload"></i> Import Papers
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-question-circle"></i> How to Export BibTeX from Popular Tools</h6>
+                </div>
+                <div class="card-body">
+                    <h6>From Zotero:</h6>
+                    <ol class="small">
+                        <li>Select papers in your library</li>
+                        <li>Right-click → Export Items</li>
+                        <li>Choose "BibTeX" format</li>
+                        <li>Save and upload here</li>
+                    </ol>
+
+                    <h6>From Mendeley:</h6>
+                    <ol class="small">
+                        <li>Select papers</li>
+                        <li>File → Export</li>
+                        <li>Choose "BibTeX (*.bib)" format</li>
+                        <li>Upload the exported file</li>
+                    </ol>
+
+                    <h6>From EndNote:</h6>
+                    <ol class="small">
+                        <li>Select references</li>
+                        <li>File → Export</li>
+                        <li>Choose "BibTeX Export" output style</li>
+                        <li>Save and upload</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

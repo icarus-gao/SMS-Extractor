@@ -1,0 +1,61 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Run Extraction - {{ project.name }}{% endblock %}
+{% block page_title %}Run Extraction{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Run Extraction for: {{ project.name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <h6>Select Papers:</h6>
+                        {% if papers %}
+                        {% for paper in papers %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="papers" 
+                                   value="{{ paper.paper_id }}" id="paper_{{ paper.paper_id }}">
+                            <label class="form-check-label" for="paper_{{ paper.paper_id }}">
+                                {{ paper.paper_id }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No papers available. Please upload papers first.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Select Feature Groups:</h6>
+                        {% if groups %}
+                        {% for group in groups %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="groups" 
+                                   value="{{ group.id }}" id="group_{{ group.id }}">
+                            <label class="form-check-label" for="group_{{ group.id }}">
+                                {{ group.group_name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No feature groups available. Please create groups first.</p>
+                        {% endif %}
+                    </div>
+                    
+                    {% if papers and groups %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-play-circle"></i> Run Extraction
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'dashboard:project-detail' project.project_id %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

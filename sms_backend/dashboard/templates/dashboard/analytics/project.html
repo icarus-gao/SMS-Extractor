@@ -1,0 +1,164 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ project.name }} Analytics - SMS Extractor{% endblock %}
+{% block page_title %}Project Analytics: {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:project-detail' project.project_id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Project
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h2 class="text-primary mb-0">{{ total_extractions }}</h2>
+            <p class="text-muted mb-0">Total Extractions</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h2 class="text-success mb-0">
+                {{ status_counts|default:0 }}
+            </h2>
+            <p class="text-muted mb-0">Completed</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h2 class="text-info mb-0">{{ group_counts|length }}</h2>
+            <p class="text-muted mb-0">Feature Groups</p>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Extraction Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                {% if status_counts %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th class="text-end">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for status in status_counts %}
+                        <tr>
+                            <td>
+                                {% if status.status == 'completed' %}
+                                <span class="badge bg-success">{{ status.status|capfirst }}</span>
+                                {% elif status.status == 'failed' %}
+                                <span class="badge bg-danger">{{ status.status|capfirst }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ status.status|capfirst }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ status.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">No extraction data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Extractions by Feature Group</h5>
+            </div>
+            <div class="card-body">
+                {% if group_counts %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Feature Group</th>
+                            <th class="text-end">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for group in group_counts %}
+                        <tr>
+                            <td>{{ group.group__group_name }}</td>
+                            <td class="text-end">{{ group.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">No extraction data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Recent Extractions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_extractions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Paper</th>
+                                <th>Feature Group</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for extraction in recent_extractions %}
+                            <tr>
+                                <td>{{ extraction.paper.paper_id }}</td>
+                                <td>{{ extraction.group.group_name }}</td>
+                                <td>
+                                    {% if extraction.status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                    {% elif extraction.status == 'failed' %}
+                                    <span class="badge bg-danger">Failed</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ extraction.status|capfirst }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ extraction.created_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'dashboard:extraction-detail' extraction.id %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">No extractions yet for this project</p>
+                    <a href="{% url 'dashboard:extraction-run' project.project_id %}" 
+                       class="btn btn-primary">
+                        <i class="bi bi-play-circle"></i> Run Extraction
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Upload Paper{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Upload New Paper</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Paper ID and Format -->
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="{{ form.paper_id.id_for_label }}" class="form-label">
+                                    Paper ID (Citation Key) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.paper_id }}
+                                {% if form.paper_id.errors %}
+                                    <div class="text-danger small">{{ form.paper_id.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">{{ form.paper_id.help_text }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.cite_format.id_for_label }}" class="form-label">
+                                    Citation Format
+                                </label>
+                                {{ form.cite_format }}
+                                {% if form.cite_format.errors %}
+                                    <div class="text-danger small">{{ form.cite_format.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- BibTeX Content -->
+                        <div class="mb-3">
+                            <label for="{{ form.bibtex_content.id_for_label }}" class="form-label">
+                                BibTeX Entry
+                            </label>
+                            {{ form.bibtex_content }}
+                            {% if form.bibtex_content.errors %}
+                                <div class="text-danger small">{{ form.bibtex_content.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">{{ form.bibtex_content.help_text }}</div>
+                        </div>
+
+                        <!-- PDF Upload -->
+                        <div class="mb-3">
+                            <label for="{{ form.pdf_file.id_for_label }}" class="form-label">
+                                PDF File
+                            </label>
+                            {{ form.pdf_file }}
+                            {% if form.pdf_file.errors %}
+                                <div class="text-danger small">{{ form.pdf_file.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">{{ form.pdf_file.help_text }}</div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Manual Entry Section (if not using BibTeX) -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">Manual Entry (Optional - if not using BibTeX)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small">{{ form.title.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-8">
+                                        <label for="{{ form.authors.id_for_label }}" class="form-label">Authors</label>
+                                        {{ form.authors }}
+                                        {% if form.authors.errors %}
+                                            <div class="text-danger small">{{ form.authors.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="{{ form.year.id_for_label }}" class="form-label">Year</label>
+                                        {{ form.year }}
+                                        {% if form.year.errors %}
+                                            <div class="text-danger small">{{ form.year.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.journal.id_for_label }}" class="form-label">Journal</label>
+                                    {{ form.journal }}
+                                    {% if form.journal.errors %}
+                                        <div class="text-danger small">{{ form.journal.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.doi.id_for_label }}" class="form-label">DOI</label>
+                                    {{ form.doi }}
+                                    {% if form.doi.errors %}
+                                        <div class="text-danger small">{{ form.doi.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Project Assignment -->
+                        <div class="mb-3">
+                            <label for="{{ form.project.id_for_label }}" class="form-label">
+                                Assign to Project
+                            </label>
+                            {{ form.project }}
+                            {% if form.project.errors %}
+                                <div class="text-danger small">{{ form.project.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">{{ form.project.help_text }}</div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'papers:library' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Upload Paper
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-question-circle"></i> How to Use</h6>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li><strong>Enter Paper ID:</strong> Choose a unique identifier (e.g., "smith2023machine")</li>
+                        <li><strong>Select Format:</strong> Choose BibTeX (recommended)</li>
+                        <li><strong>Paste BibTeX:</strong> Copy BibTeX from Google Scholar, PubMed, or your reference manager</li>
+                        <li><strong>Upload PDF:</strong> (Optional) Attach the full-text PDF</li>
+                        <li><strong>Submit:</strong> Metadata will be automatically extracted!</li>
+                    </ol>
+                    
+                    <h6>Getting BibTeX from Google Scholar:</h6>
+                    <p class="small">
+                        1. Search for your paper on Google Scholar<br>
+                        2. Click the quotation marks (") below the paper<br>
+                        3. Select "BibTeX" at the bottom<br>
+                        4. Copy and paste the content here
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-update citation key in BibTeX when paper_id changes
+    document.getElementById('id_paper_id').addEventListener('input', function() {
+        const paperId = this.value;
+        const bibtexField = document.getElementById('id_bibtex_content');
+        const bibtexContent = bibtexField.value;
+        
+        if (bibtexContent) {
+            // Replace citation key in BibTeX
+            const updatedBibtex = bibtexContent.replace(
+                /@(\w+)\{[^,\s]+/,
+                '@$1{' + paperId
+            );
+            bibtexField.value = updatedBibtex;
+        }
+    });
+</script>
+{% endblock %}

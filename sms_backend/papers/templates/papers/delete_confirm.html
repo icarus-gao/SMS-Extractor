@@ -1,0 +1,45 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Delete Paper{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-6 offset-lg-3">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Are you sure you want to delete this paper?</h5>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Paper:</strong> {{ object.display_title }}<br>
+                        <strong>Citation Key:</strong> {{ object.citation_key }}<br>
+                        {% if object.project %}
+                        <strong>Project:</strong> {{ object.project.name }}<br>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-danger">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <strong>Warning:</strong> This action cannot be undone. All associated extractions will also be affected.
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'papers:detail' object.paper_id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Yes, Delete Paper
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Create Project - SMS Extractor{% endblock %}
+{% block page_title %}Create New Project{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">New Project</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="project_id" class="form-label">Project ID *</label>
+                        <input type="text" class="form-control" id="project_id" name="project_id" required
+                               placeholder="my-project-2025" pattern="[a-zA-Z0-9_-]+">
+                        <small class="form-text text-muted">Only letters, numbers, hyphens, and underscores</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="My Research Project">
+                    </div>
+                    <div class="mb-3">
+                        <label for="model" class="form-label">AI Model</label>
+                        <input type="text" class="form-control" id="model" name="model" value="gpt-4">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Description</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Project</button>
+                    <a href="{% url 'dashboard:home' %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
