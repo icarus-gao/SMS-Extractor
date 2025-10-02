@@ -2,7 +2,11 @@
 
 **Systematic Review Management System - Data Extraction Tool**
 
-A Django-based web application for systematic review research with AI-powered assistance and comprehensive paper management.
+A Django-based web application for systematic review research with AI-powered assistance, comprehensive paper management, and customizable data extraction schemas.
+
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](docs/RELEASE_v1.0.0.md)
+[![Django](https://img.shields.io/badge/django-5.2.7-green.svg)](https://www.djangoproject.com/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
 ---
 
@@ -34,6 +38,7 @@ After starting, open your browser and visit:
 
 - **Home**: http://127.0.0.1:8000/
 - **Paper Library**: http://127.0.0.1:8000/papers/
+- **Schema Library**: http://127.0.0.1:8000/projects/schemas/
 - **AI Assistant**: http://127.0.0.1:8000/agents/chat/
 - **Admin Panel**: http://127.0.0.1:8000/admin/
 
@@ -50,6 +55,17 @@ After starting, open your browser and visit:
 - Create and manage systematic review projects
 - Custom data extraction field groups
 - Project progress tracking and statistics
+- Multi-schema support for structured data extraction
+
+### 📦 Schema Library (New!)
+
+- **Custom Data Templates**: Create reusable schemas for structured data extraction
+- **12+ Field Types**: Text, number, select, multi-select, boolean, date, year, URL, rating, etc.
+- **AI Extraction Config**: Define AI prompts and strategies for automatic extraction
+- **Export Configuration**: Customize Excel/CSV export format (column names, widths, alignment)
+- **Immutability Design**: Schemas lock after first use to ensure data consistency
+- **Version Control**: Duplicate schemas to create new versions while preserving history
+- **Sample Schemas**: Includes ML Methods Comparison and Study Characteristics templates
 
 ### 📚 Paper Library
 
@@ -176,7 +192,11 @@ python manage.py createsuperuser
 ### 7. Add sample data (optional)
 
 ```bash
+# Add sample papers
 python add_sample_papers.py
+
+# Add sample schemas
+python create_sample_schemas.py
 ```
 
 ### 8. Start the server
@@ -215,14 +235,27 @@ python manage.py runserver
 4. Review import preview
 5. Confirm import - all papers added at once!
 
-### Scenario 3: Working on a Systematic Review Project
+### Scenario 3: Creating a Custom Schema
+
+1. Navigate to **Schema Library**
+2. Click **"Create New Schema"** or duplicate an existing one
+3. Define basic info (name, category, description)
+4. Edit JSON to add fields:
+   - Field types (text, number, select, etc.)
+   - Validation rules
+   - AI extraction prompts
+   - Export configuration
+5. Save as Draft - edit anytime
+6. Use in projects - automatically locks on first use
+
+### Scenario 4: Working on a Systematic Review Project
 
 1. Create a new project from Dashboard
-2. Create data extraction field groups
+2. Associate relevant schemas from Schema Library
 3. Add papers to your project from Paper Library
-4. Define extraction schema
-5. Start extracting from papers
-6. Export results for analysis
+4. Use AI or manual extraction to fill schema fields
+5. View data in table format (Excel-like)
+6. Export results to Excel/CSV/LaTeX
 
 ---
 
@@ -306,7 +339,19 @@ This project is licensed under the MIT License.
 
 ---
 
-## 📧 Contact
+## � Documentation
+
+Comprehensive documentation is available in the `docs/` folder:
+
+- **[Schema User Guide](docs/SCHEMA_USER_GUIDE.md)** - Complete guide to creating and using schemas
+- **[Schema Design](docs/SCHEMA_DESIGN.md)** - Technical design and architecture
+- **[Schema Export Implementation](docs/SCHEMA_EXPORT_IMPLEMENTATION.md)** - Export functionality details
+- **[Release Notes v1.0.0](docs/RELEASE_v1.0.0.md)** - Version 1.0.0 features and changes
+- **[Feature Group Enhancement](docs/FEATURE_GROUP_ENHANCEMENT.md)** - Advanced extraction features
+
+---
+
+## �📧 Contact
 
 For questions or support, please open an issue on GitHub.
 

@@ -1,0 +1,460 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}{{ schema.name }} - Schema Library{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'projects:schema_library' %}">Schema Library</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ schema.name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex align-items-center mb-2">
+                <h2 class="mb-0 me-3">{{ schema.name }}</h2>
+                <span class="badge {% if schema.is_locked %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                    {% if schema.is_locked %}🔒 Locked{% else %}📝 Draft{% endif %}
+                </span>
+            </div>
+            
+            {% if schema.name_zh %}
+            <p class="text-muted fs-5 mb-2">{{ schema.name_zh }}</p>
+            {% endif %}
+            
+            {% if schema.description %}
+            <p class="text-muted">{{ schema.description }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4 text-end">
+            <!-- Action Buttons -->
+            {% if not schema.is_locked %}
+            <a href="{% url 'projects:schema_edit' schema.schema_id %}" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i>
+                编辑
+            </a>
+            {% endif %}
+            
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <!-- Duplicate -->
+                    <li>
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#duplicateModal">
+                            <i class="bi bi-files me-2"></i>
+                            复制 Schema
+                        </a>
+                    </li>
+                    
+                    <!-- Lock (only for draft) -->
+                    {% if not schema.is_locked %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#lockModal">
+                            <i class="bi bi-lock me-2"></i>
+                            锁定 Schema
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Delete (only if can delete) -->
+                    {% if schema.can_delete %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="bi bi-trash me-2"></i>
+                            删除 Schema
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-check text-primary fs-1"></i>
+                    <h3 class="mt-2 mb-0">{{ fields|length }}</h3>
+                    <small class="text-muted">字段数量</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-diagram-3 text-success fs-1"></i>
+                    <h3 class="mt-2 mb-0">{{ schema.usage_count }}</h3>
+                    <small class="text-muted">项目使用</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-text text-info fs-1"></i>
+                    <h3 class="mt-2 mb-0">{{ schema.extraction_count }}</h3>
+                    <small class="text-muted">提取次数</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-tag text-warning fs-1"></i>
+                    <h4 class="mt-2 mb-0">v{{ schema.version }}</h4>
+                    <small class="text-muted">版本号</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#fields" role="tab">
+                <i class="bi bi-list-ul me-1"></i>
+                字段列表
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#projects" role="tab">
+                <i class="bi bi-folder me-1"></i>
+                使用的项目 ({{ projects_using.count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#metadata" role="tab">
+                <i class="bi bi-info-circle me-1"></i>
+                元数据
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#json" role="tab">
+                <i class="bi bi-code-square me-1"></i>
+                JSON 定义
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Fields Tab -->
+        <div class="tab-pane fade show active" id="fields" role="tabpanel">
+            {% if fields %}
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>字段名称</th>
+                                <th>字段 ID</th>
+                                <th>类型</th>
+                                <th>必填</th>
+                                <th>提取方式</th>
+                                <th>导出</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for field in fields %}
+                            <tr>
+                                <td>{{ field.order }}</td>
+                                <td>
+                                    <strong>{{ field.name }}</strong>
+                                    {% if field.name_zh %}
+                                    <br><small class="text-muted">{{ field.name_zh }}</small>
+                                    {% endif %}
+                                    {% if field.description %}
+                                    <br><small class="text-muted">{{ field.description|truncatewords:15 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td><code>{{ field.field_id }}</code></td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ field.type }}</span>
+                                </td>
+                                <td>
+                                    {% if field.required %}
+                                    <span class="text-danger">✓ 必填</span>
+                                    {% else %}
+                                    <span class="text-muted">- 可选</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if field.extraction %}
+                                    <span class="badge bg-{% if field.extraction.mode == 'ai' %}primary{% else %}info{% endif %}">
+                                        {{ field.extraction.mode|upper }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if field.export.enabled %}
+                                    <span class="text-success">✓</span>
+                                    {% else %}
+                                    <span class="text-muted">✗</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                该 Schema 还没有定义字段
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Projects Tab -->
+        <div class="tab-pane fade" id="projects" role="tabpanel">
+            {% if projects_using %}
+            <div class="row g-3">
+                {% for project in projects_using %}
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{% url 'projects:detail' project.project_id %}">
+                                    {{ project.name }}
+                                </a>
+                            </h5>
+                            <p class="card-text text-muted">
+                                <code>{{ project.project_id }}</code>
+                            </p>
+                            {% if project.notes %}
+                            <p class="card-text small">{{ project.notes|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                该 Schema 还没有被任何项目使用
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Metadata Tab -->
+        <div class="tab-pane fade" id="metadata" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th style="width: 200px;">Schema ID</th>
+                            <td><code>{{ schema.schema_id }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>状态</th>
+                            <td>
+                                <span class="badge {% if schema.is_locked %}bg-danger{% else %}bg-success{% endif %}">
+                                    {% if schema.is_locked %}🔒 Locked{% else %}📝 Draft{% endif %}
+                                </span>
+                                {% if schema.is_locked and schema.locked_at %}
+                                <small class="text-muted ms-2">锁定于 {{ schema.locked_at|date:"Y-m-d H:i" }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if schema.category %}
+                        <tr>
+                            <th>分类</th>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ schema.category }}</span>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>版本</th>
+                            <td>v{{ schema.version }}</td>
+                        </tr>
+                        {% if schema.parent_schema %}
+                        <tr>
+                            <th>复制自</th>
+                            <td>
+                                <a href="{% url 'projects:schema_detail' schema.parent_schema.schema_id %}">
+                                    {{ schema.parent_schema.name }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if schema.created_by %}
+                        <tr>
+                            <th>创建者</th>
+                            <td>{{ schema.created_by }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>创建时间</th>
+                            <td>{{ schema.created_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                        <tr>
+                            <th>最后更新</th>
+                            <td>{{ schema.updated_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON Tab -->
+        <div class="tab-pane fade" id="json" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">完整 JSON 定义</h6>
+                    <button class="btn btn-sm btn-outline-secondary" id="copyJsonBtn">
+                        <i class="bi bi-clipboard me-1"></i>
+                        复制
+                    </button>
+                </div>
+                <div class="card-body">
+                    <pre id="jsonContent" class="bg-light p-3 rounded" style="max-height: 600px; overflow-y: auto;"><code>{{ schema.fields_definition }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate Modal -->
+<div class="modal fade" id="duplicateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'projects:schema_duplicate' schema.schema_id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">复制 Schema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">
+                        创建一个基于 <strong>{{ schema.name }}</strong> 的新 Draft Schema
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label">新 Schema 名称</label>
+                        <input 
+                            type="text" 
+                            name="new_name" 
+                            class="form-control" 
+                            value="{{ schema.name }} (Copy)"
+                            required
+                        >
+                    </div>
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        新 Schema 将继承所有字段定义，但状态为 Draft（可编辑）
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-files me-1"></i>
+                        复制
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lock Modal -->
+{% if not schema.is_locked %}
+<div class="modal fade" id="lockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'projects:schema_lock' schema.schema_id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">锁定 Schema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>警告：</strong>锁定后将无法再编辑或删除此 Schema！
+                    </div>
+                    <p>确定要锁定 <strong>{{ schema.name }}</strong> 吗？</p>
+                    <p class="text-muted small">
+                        通常，Schema 会在首次被项目使用时自动锁定。手动锁定适用于您确定 Schema 已经完成，不需要再修改的情况。
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-lock me-1"></i>
+                        确认锁定
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Modal -->
+{% if schema.can_delete %}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'projects:schema_delete' schema.schema_id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">删除 Schema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>警告：</strong>此操作无法撤销！
+                    </div>
+                    <p>确定要删除 <strong>{{ schema.name }}</strong> 吗？</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>
+                        确认删除
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.getElementById('copyJsonBtn').addEventListener('click', function() {
+    const jsonContent = document.getElementById('jsonContent').textContent;
+    navigator.clipboard.writeText(jsonContent).then(function() {
+        const btn = document.getElementById('copyJsonBtn');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>已复制！';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(function() {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    });
+});
+</script>
+{% endblock %}

@@ -332,8 +332,8 @@ def group_delete(request, project_id, group_id):
     group = get_object_or_404(ProjectGroup, id=group_id, project=project)
     group_name = group.group_name
     
-    # Delete related extractions
-    Extraction.objects.filter(group=group).delete()
+    # Note: Extractions are not directly linked to groups, so no need to delete them
+    # Extractions are linked to projects and papers, not to feature groups
     
     # Delete group
     group.delete()

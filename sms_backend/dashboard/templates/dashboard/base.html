@@ -69,6 +69,9 @@
             <a class="nav-link" href="{% url 'papers:library' %}">
                 <i class="bi bi-book"></i> Paper Library
             </a>
+            <a class="nav-link" href="{% url 'projects:schema_library' %}">
+                <i class="bi bi-box-seam"></i> Schema Library
+            </a>
             <a class="nav-link" href="{% url 'agents:chat' %}">
                 <i class="bi bi-robot"></i> AI Assistant
             </a>
@@ -112,6 +115,18 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000); // 5 seconds
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

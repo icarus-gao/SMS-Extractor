@@ -1,0 +1,459 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}{% if mode == 'create' %}创建{% else %}编辑{% endif %} Schema - SMS Extractor{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'projects:schema_library' %}">Schema Library</a>
+                    </li>
+                    {% if mode == 'edit' %}
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'projects:schema_detail' schema.schema_id %}">{{ schema.name }}</a>
+                    </li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">
+                        {% if mode == 'create' %}创建新 Schema{% else %}编辑 Schema{% endif %}
+                    </li>
+                </ol>
+            </nav>
+            <h2>
+                <i class="bi bi-{% if mode == 'create' %}plus-circle{% else %}pencil-square{% endif %} me-2"></i>
+                {% if mode == 'create' %}创建新 Schema{% else %}编辑 Schema{% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <form method="post" id="schemaForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Left: Basic Info -->
+            <div class="col-md-4">
+                <div class="card mb-4 sticky-top" style="top: 20px;">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">基本信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Schema 名称 <span class="text-danger">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                name="name" 
+                                class="form-control" 
+                                placeholder="e.g., ML Methods Comparison"
+                                value="{% if schema %}{{ schema.name }}{% endif %}"
+                                required
+                            >
+                            <small class="form-text text-muted">英文名称，用于标识</small>
+                        </div>
+
+                        <!-- Chinese Name -->
+                        <div class="mb-3">
+                            <label class="form-label">中文名称</label>
+                            <input 
+                                type="text" 
+                                name="name_zh" 
+                                class="form-control" 
+                                placeholder="e.g., 机器学习方法对比"
+                                value="{% if schema %}{{ schema.name_zh }}{% endif %}"
+                            >
+                            <small class="form-text text-muted">可选，方便理解</small>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label class="form-label">分类</label>
+                            <input 
+                                type="text" 
+                                name="category" 
+                                class="form-control" 
+                                placeholder="e.g., Machine Learning"
+                                value="{% if schema %}{{ schema.category }}{% endif %}"
+                                list="categoryList"
+                            >
+                            <datalist id="categoryList">
+                                <option value="Machine Learning">
+                                <option value="Natural Language Processing">
+                                <option value="Computer Vision">
+                                <option value="Healthcare">
+                                <option value="Finance">
+                                <option value="General">
+                            </datalist>
+                            <small class="form-text text-muted">用于筛选和组织</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <textarea 
+                                name="description" 
+                                class="form-control" 
+                                rows="4"
+                                placeholder="简要描述这个 Schema 的用途和场景..."
+                            >{% if schema %}{{ schema.description }}{% endif %}</textarea>
+                        </div>
+
+                        <!-- Schema ID (read-only for edit) -->
+                        {% if mode == 'edit' %}
+                        <div class="mb-3">
+                            <label class="form-label">Schema ID</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                value="{{ schema.schema_id }}"
+                                readonly
+                            >
+                            <small class="form-text text-muted">自动生成，不可修改</small>
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i>
+                                保存 Schema
+                            </button>
+                            <a href="{% url 'projects:schema_library' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                取消
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Schema Editor -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Schema 定义（JSON）</h5>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" id="formatJsonBtn">
+                                <i class="bi bi-code"></i> 格式化
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="validateJsonBtn">
+                                <i class="bi bi-check-circle"></i> 验证
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="loadTemplateBtn">
+                                <i class="bi bi-file-earmark-text"></i> 加载模板
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <textarea 
+                            name="fields_json" 
+                            id="fieldsJsonEditor" 
+                            class="form-control font-monospace"
+                            rows="25"
+                            style="resize: vertical; font-size: 13px; border: none;"
+                            spellcheck="false"
+                        >{% if fields_json %}{{ fields_json }}{% else %}{
+  "schema_meta": {
+    "name": "New Schema",
+    "description": "Schema description",
+    "category": "General",
+    "version": "1.0"
+  },
+  "export_config": {
+    "default_format": "excel",
+    "include_metadata": true,
+    "include_confidence": false
+  },
+  "fields": [
+    {
+      "field_id": "paper_id",
+      "order": 1,
+      "name": "Paper ID",
+      "type": "auto",
+      "description": "Automatically filled from paper ID",
+      "required": true,
+      "system_field": true,
+      "export": {
+        "enabled": true,
+        "column_name": "Paper ID",
+        "width": 80,
+        "align": "left"
+      }
+    },
+    {
+      "field_id": "citation_key",
+      "order": 2,
+      "name": "Citation",
+      "type": "auto",
+      "description": "Automatically filled from citation key",
+      "required": true,
+      "system_field": true,
+      "export": {
+        "enabled": true,
+        "column_name": "Citation",
+        "width": 120,
+        "align": "left"
+      }
+    }
+  ]
+}{% endif %}</textarea>
+                    </div>
+                    <div class="card-footer bg-light">
+                        <div id="validationResult"></div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            提示：JSON 格式必须正确。可以参考
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#schemaHelpModal">Schema 格式说明</a>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Field Type Reference -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">字段类型参考</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 small">
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">text</span> - 短文本
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">long-text</span> - 长文本
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">number</span> - 数字
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">select</span> - 单选
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">multi-select</span> - 多选
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">boolean</span> - 是/否
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">date</span> - 日期
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">year</span> - 年份
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">url</span> - URL
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">rating</span> - 评分
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">multi-text</span> - 多行文本
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-secondary">auto</span> - 系统自动
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Schema Help Modal -->
+<div class="modal fade" id="schemaHelpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Schema 格式说明</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>基本结构</h6>
+                <pre class="bg-light p-3 rounded"><code>{
+  "schema_meta": { ... },
+  "export_config": { ... },
+  "fields": [ ... ]
+}</code></pre>
+
+                <h6 class="mt-3">字段定义示例</h6>
+                <pre class="bg-light p-3 rounded"><code>{
+  "field_id": "method_name",
+  "order": 1,
+  "name": "Method Name",
+  "type": "text",
+  "description": "Name of the ML method",
+  "required": true,
+  "validation": {
+    "max_length": 100
+  },
+  "extraction": {
+    "mode": "ai",
+    "prompt": "What is the method name?"
+  },
+  "export": {
+    "enabled": true,
+    "column_name": "Method",
+    "width": 150,
+    "align": "left"
+  }
+}</code></pre>
+
+                <h6 class="mt-3">必填字段</h6>
+                <ul>
+                    <li><code>field_id</code> - 字段唯一标识</li>
+                    <li><code>name</code> - 字段名称</li>
+                    <li><code>type</code> - 字段类型</li>
+                    <li><code>order</code> - 显示顺序</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editor = document.getElementById('fieldsJsonEditor');
+    const validationResult = document.getElementById('validationResult');
+
+    // Format JSON
+    document.getElementById('formatJsonBtn').addEventListener('click', function() {
+        try {
+            const json = JSON.parse(editor.value);
+            editor.value = JSON.stringify(json, null, 2);
+            showMessage('success', 'JSON 格式化成功！');
+        } catch (e) {
+            showMessage('danger', 'JSON 格式错误: ' + e.message);
+        }
+    });
+
+    // Validate JSON
+    document.getElementById('validateJsonBtn').addEventListener('click', function() {
+        const formData = new FormData();
+        formData.append('fields_json', editor.value);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch('{% url "projects:schema_validate_api" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                showMessage('success', data.message);
+            } else {
+                let errorHtml = '<strong>验证失败：</strong><ul class="mb-0 mt-2">';
+                data.errors.forEach(err => {
+                    errorHtml += `<li>${err}</li>`;
+                });
+                errorHtml += '</ul>';
+                showMessage('danger', errorHtml);
+            }
+        })
+        .catch(error => {
+            showMessage('danger', '验证请求失败: ' + error);
+        });
+    });
+
+    // Load Template
+    document.getElementById('loadTemplateBtn').addEventListener('click', function() {
+        if (confirm('这将替换当前的 JSON 内容。确定要加载模板吗？')) {
+            const template = {
+                "schema_meta": {
+                    "name": document.querySelector('[name=name]').value || "New Schema",
+                    "description": document.querySelector('[name=description]').value || "Schema description",
+                    "category": document.querySelector('[name=category]').value || "General",
+                    "version": "1.0"
+                },
+                "export_config": {
+                    "default_format": "excel",
+                    "include_metadata": true,
+                    "include_confidence": false
+                },
+                "fields": [
+                    {
+                        "field_id": "paper_id",
+                        "order": 1,
+                        "name": "Paper ID",
+                        "type": "auto",
+                        "required": true,
+                        "system_field": true,
+                        "export": {"enabled": true, "column_name": "Paper ID", "width": 80, "align": "left"}
+                    },
+                    {
+                        "field_id": "citation_key",
+                        "order": 2,
+                        "name": "Citation",
+                        "type": "auto",
+                        "required": true,
+                        "system_field": true,
+                        "export": {"enabled": true, "column_name": "Citation", "width": 120, "align": "left"}
+                    },
+                    {
+                        "field_id": "example_field",
+                        "order": 3,
+                        "name": "Example Field",
+                        "type": "text",
+                        "description": "This is an example field",
+                        "required": false,
+                        "extraction": {
+                            "mode": "ai",
+                            "prompt": "Extract example information"
+                        },
+                        "export": {"enabled": true, "column_name": "Example", "width": 150, "align": "left"}
+                    }
+                ]
+            };
+            editor.value = JSON.stringify(template, null, 2);
+            showMessage('success', '模板已加载！');
+        }
+    });
+
+    function showMessage(type, message) {
+        validationResult.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show mb-0" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+    }
+
+    // Auto-save to localStorage (optional)
+    editor.addEventListener('input', function() {
+        localStorage.setItem('schema_draft', editor.value);
+    });
+
+    // Load from localStorage if available
+    const draft = localStorage.getItem('schema_draft');
+    if (draft && !editor.value.trim() && confirm('检测到未保存的草稿，是否恢复？')) {
+        editor.value = draft;
+    }
+});
+</script>
+
+<style>
+.font-monospace {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+}
+
+textarea#fieldsJsonEditor {
+    background-color: #f8f9fa;
+    line-height: 1.6;
+}
+
+code {
+    color: #e83e8c;
+}
+
+.sticky-top {
+    position: sticky;
+}
+</style>
+{% endblock %}
