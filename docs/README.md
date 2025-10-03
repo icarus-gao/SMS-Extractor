@@ -1,113 +1,127 @@
 # 📚 Documentation Index
 
-欢迎来到 SMS Extractor 文档中心！
+Welcome to SMS Extractor Documentation Hub!
 
 ---
 
-## 📖 使用文档
+## 📖 User Documentation
 
-### 新手入门
-- **[主 README](../README.md)** - 快速开始、安装、基本使用
+### Getting Started
+- **[Main README](../README.md)** - Quick start, installation, basic usage
 
 ### Schema Library
-- **[Schema 用户指南](SCHEMA_USER_GUIDE.md)** ⭐ 推荐首读
-  - Schema 概念介绍
-  - 创建自定义 Schema
-  - JSON 格式详解
-  - 字段类型完整列表
-  - 最佳实践和示例
-  - 常见问题解答
+- **[Schema User Guide](SCHEMA_USER_GUIDE.md)** ⭐ Recommended for beginners
+  - Schema concepts introduction
+  - Creating custom schemas
+  - JSON format specification
+  - Complete field types list
+  - Best practices and examples
+  - FAQ
+
+- **[Schema Complete Guide](SCHEMA_GUIDE.md)** ⭐ Comprehensive reference
+  - What is Schema and why it matters
+  - Complete JSON format with evidence attribute
+  - Field types detailed explanation
+  - AI-assisted schema generation
+  - Real-world use cases
+  - Best practices
+
+### Core Features
+- **[Evidence Attribute Feature](EVIDENCE_FEATURE.md)** ⭐ NEW
+  - What is evidence and why it matters
+  - Evidence format standards
+  - Quality levels (⭐ to ⭐⭐⭐⭐⭐)
+  - Technical implementation
+  - Usage guide with examples
+  - Quality control workflow
+  - Future improvements
+
+- **[Extraction Feature Guide](EXTRACTION_FEATURE_GUIDE.md)**
+  - Manual extraction workflow
+  - AI-assisted extraction
+  - Batch extraction
+  - Validation and quality control
+
+- **[Analysis Feature Guide](ANALYSIS_FEATURE_GUIDE.md)**
+  - Data analysis and visualization
+  - Schema-based comparison
+  - Export options
+  - Statistical analysis
 
 ---
 
-## 🔧 技术文档
+## 🔧 Technical Documentation
 
-### 系统设计
-- **[Schema 设计文档](SCHEMA_DESIGN.md)**
-  - 完整的架构设计
-  - 数据模型定义
-  - API 接口规范
-  - UI/UX 设计方案
+### Release Notes
+- **[Evidence Feature Update](RELEASE_UPDATE_EVIDENCE.md)** - October 2025
+  - Evidence attribute feature summary
+  - Technical changes (frontend, backend, schema)
+  - Usage examples
+  - Testing checklist
+  - Roadmap
 
-- **[Schema 导出实现](SCHEMA_EXPORT_IMPLEMENTATION.md)**
-  - Excel/CSV/LaTeX 导出
-  - 格式映射逻辑
-  - 导出器实现代码
-
-- **[Schema 不可变性](SCHEMA_IMMUTABILITY.md)**
-  - 不可变性原则
-  - 生命周期管理
-  - 版本演进策略
-
-### 功能增强
-- **[Feature Group 增强](FEATURE_GROUP_ENHANCEMENT.md)**
-  - 高级提取功能
-  - 字段类型扩展
-  - AI 提取策略
+- **[Version 1.0.0 Release](RELEASE_v1.0.0.md)**
+  - Initial release features
+  - System architecture
+  - Installation guide
 
 ---
 
-## 📋 版本发布
+## � Quick Navigation
 
-- **[Release v1.0.0](RELEASE_v1.0.0.md)**
-  - v1.0.0 版本功能
-  - 项目管理改进
-  - Paper Library 增强
-  - 已知问题
+### I want to...
 
----
+#### Learn how to use Schema
+➡️ [Schema User Guide](SCHEMA_USER_GUIDE.md) - Beginner-friendly guide  
+➡️ [Schema Complete Guide](SCHEMA_GUIDE.md) - Comprehensive reference with AI generation
 
-## 🛠️ 维护文档
+#### Understand the Evidence Feature
+➡️ [Evidence Feature Documentation](EVIDENCE_FEATURE.md)
 
-- **[项目清理总结](PROJECT_CLEANUP.md)**
-  - 2025-10-02 清理记录
-  - 删除的文件列表
-  - 项目结构优化
-  - 后续清理建议
+#### Learn about data extraction
+➡️ [Extraction Feature Guide](EXTRACTION_FEATURE_GUIDE.md)
 
----
+#### Analyze extracted data
+➡️ [Analysis Feature Guide](ANALYSIS_FEATURE_GUIDE.md)
 
-## 📑 快速导航
-
-### 我想...
-
-#### 学习如何使用 Schema
-➡️ [Schema 用户指南](SCHEMA_USER_GUIDE.md)
-
-#### 了解 Schema 的技术实现
-➡️ [Schema 设计文档](SCHEMA_DESIGN.md)
-
-#### 实现数据导出功能
-➡️ [Schema 导出实现](SCHEMA_EXPORT_IMPLEMENTATION.md)
-
-#### 了解 Schema 为什么不能修改
-➡️ [Schema 不可变性](SCHEMA_IMMUTABILITY.md)
-
-#### 查看最新版本的功能
-➡️ [Release v1.0.0](RELEASE_v1.0.0.md)
-
-#### 了解高级提取功能
-➡️ [Feature Group 增强](FEATURE_GROUP_ENHANCEMENT.md)
+#### Check latest updates
+➡️ [Evidence Feature Update](RELEASE_UPDATE_EVIDENCE.md) - October 2025  
+➡️ [Release v1.0.0](RELEASE_v1.0.0.md) - Initial release
 
 ---
 
-## 💡 文档贡献
+## 📊 Document Status
 
-如果您发现文档有误或需要补充，欢迎：
-1. 提交 Issue 说明问题
-2. 直接提交 Pull Request 修改文档
-3. 联系项目维护者
-
----
-
-## 📊 文档统计
-
-- 用户文档: 1 篇
-- 技术文档: 4 篇
-- 发布文档: 1 篇
-- 维护文档: 1 篇
-- **总计**: 7 篇文档
+| Document | Status | Last Updated | Version |
+|----------|--------|--------------|---------|
+| SCHEMA_GUIDE.md | ✅ Current | Oct 3, 2025 | v3.0 |
+| EVIDENCE_FEATURE.md | ✅ Current | Oct 3, 2025 | v1.0 |
+| RELEASE_UPDATE_EVIDENCE.md | ✅ Current | Oct 3, 2025 | v1.0 |
+| SCHEMA_USER_GUIDE.md | ✅ Current | - | - |
+| EXTRACTION_FEATURE_GUIDE.md | ✅ Current | - | - |
+| ANALYSIS_FEATURE_GUIDE.md | ✅ Current | - | - |
+| RELEASE_v1.0.0.md | ✅ Current | - | v1.0 |
 
 ---
 
-**最后更新**: 2025-10-02
+## 💡 Documentation Contribution
+
+Contributions to documentation are welcome! Please ensure:
+- Use clear, concise English
+- Include practical examples
+- Follow existing formatting style
+- Update this index when adding new documents
+
+---
+
+## 📊 Documentation Statistics
+
+- User Guides: 3 documents
+- Feature Documentation: 3 documents
+- Release Notes: 2 documents
+- **Total**: 8 documents
+
+---
+
+**Last Updated**: October 3, 2025  
+**Maintained by**: SMS Extractor Team

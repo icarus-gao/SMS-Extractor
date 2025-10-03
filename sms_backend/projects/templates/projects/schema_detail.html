@@ -11,15 +11,24 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
-                        <a href="{% url 'projects:schema_library' %}">Schema Library</a>
+                        <a href="{% url 'dashboard:schema-library' %}">Schema Library</a>
                     </li>
                     <li class="breadcrumb-item active">{{ schema.name }}</li>
                 </ol>
             </nav>
             
             <div class="d-flex align-items-center mb-2">
-                <h2 class="mb-0 me-3">{{ schema.name }}</h2>
-                <span class="badge {% if schema.is_locked %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                <h2 class="mb-0 me-2">{{ schema.name }}</h2>
+
+                <!-- Lock/Unlock Button -->
+                <button type="button" class="btn btn-sm {% if schema.is_locked %}btn-outline-warning{% else %}btn-outline-secondary{% endif %}" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#{% if schema.is_locked %}unlockModal{% else %}lockModal{% endif %}"
+                        title="{% if schema.is_locked %}Unlock to Draft{% else %}Lock to Published{% endif %}">
+                    <i class="bi {% if schema.is_locked %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}"></i>
+                </button>
+
+                <span class="badge {% if schema.is_locked %}bg-danger{% else %}bg-success{% endif %} fs-6 ms-3">
                     {% if schema.is_locked %}🔒 Locked{% else %}📝 Draft{% endif %}
                 </span>
             </div>
@@ -36,9 +45,9 @@
         <div class="col-md-4 text-end">
             <!-- Action Buttons -->
             {% if not schema.is_locked %}
-            <a href="{% url 'projects:schema_edit' schema.schema_id %}" class="btn btn-primary">
+            <a href="{% url 'dashboard:schema-edit' schema.schema_id %}" class="btn btn-primary">
                 <i class="bi bi-pencil me-1"></i>
-                编辑
+                Edit
             </a>
             {% endif %}
             
@@ -51,20 +60,9 @@
                     <li>
                         <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#duplicateModal">
                             <i class="bi bi-files me-2"></i>
-                            复制 Schema
+                            Duplicate Schema
                         </a>
                     </li>
-                    
-                    <!-- Lock (only for draft) -->
-                    {% if not schema.is_locked %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#lockModal">
-                            <i class="bi bi-lock me-2"></i>
-                            锁定 Schema
-                        </a>
-                    </li>
-                    {% endif %}
                     
                     <!-- Delete (only if can delete) -->
                     {% if schema.can_delete %}
@@ -72,7 +70,7 @@
                     <li>
                         <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal">
                             <i class="bi bi-trash me-2"></i>
-                            删除 Schema
+                            Delete Schema
                         </a>
                     </li>
                     {% endif %}
@@ -88,7 +86,7 @@
                 <div class="card-body text-center">
                     <i class="bi bi-list-check text-primary fs-1"></i>
                     <h3 class="mt-2 mb-0">{{ fields|length }}</h3>
-                    <small class="text-muted">字段数量</small>
+                    <small class="text-muted">Field Count</small>
                 </div>
             </div>
         </div>
@@ -97,7 +95,7 @@
                 <div class="card-body text-center">
                     <i class="bi bi-diagram-3 text-success fs-1"></i>
                     <h3 class="mt-2 mb-0">{{ schema.usage_count }}</h3>
-                    <small class="text-muted">项目使用</small>
+                    <small class="text-muted">Projects Using</small>
                 </div>
             </div>
         </div>
@@ -106,7 +104,7 @@
                 <div class="card-body text-center">
                     <i class="bi bi-file-text text-info fs-1"></i>
                     <h3 class="mt-2 mb-0">{{ schema.extraction_count }}</h3>
-                    <small class="text-muted">提取次数</small>
+                    <small class="text-muted">Extraction Count</small>
                 </div>
             </div>
         </div>
@@ -115,7 +113,7 @@
                 <div class="card-body text-center">
                     <i class="bi bi-tag text-warning fs-1"></i>
                     <h4 class="mt-2 mb-0">v{{ schema.version }}</h4>
-                    <small class="text-muted">版本号</small>
+                    <small class="text-muted">Version</small>
                 </div>
             </div>
         </div>
@@ -126,25 +124,25 @@
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#fields" role="tab">
                 <i class="bi bi-list-ul me-1"></i>
-                字段列表
+                Field List
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#projects" role="tab">
                 <i class="bi bi-folder me-1"></i>
-                使用的项目 ({{ projects_using.count }})
+                Projects Using ({{ projects_using.count }})
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#metadata" role="tab">
                 <i class="bi bi-info-circle me-1"></i>
-                元数据
+                Metadata
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#json" role="tab">
                 <i class="bi bi-code-square me-1"></i>
-                JSON 定义
+                JSON Definition
             </a>
         </li>
     </ul>
@@ -160,12 +158,12 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 50px;">#</th>
-                                <th>字段名称</th>
-                                <th>字段 ID</th>
-                                <th>类型</th>
-                                <th>必填</th>
-                                <th>提取方式</th>
-                                <th>导出</th>
+                                <th>Field Name</th>
+                                <th>Fields ID</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Extraction Method</th>
+                                <th>Export</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -187,9 +185,9 @@
                                 </td>
                                 <td>
                                     {% if field.required %}
-                                    <span class="text-danger">✓ 必填</span>
+                                    <span class="text-danger">✓ Required</span>
                                     {% else %}
-                                    <span class="text-muted">- 可选</span>
+                                    <span class="text-muted">- Optional</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -217,7 +215,7 @@
             {% else %}
             <div class="alert alert-info">
                 <i class="bi bi-info-circle me-2"></i>
-                该 Schema 还没有定义字段
+                This schema has no fields defined yet
             </div>
             {% endif %}
         </div>
@@ -249,7 +247,7 @@
             {% else %}
             <div class="alert alert-info">
                 <i class="bi bi-info-circle me-2"></i>
-                该 Schema 还没有被任何项目使用
+                This schema has not been used by any project yet
             </div>
             {% endif %}
         </div>
@@ -264,33 +262,33 @@
                             <td><code>{{ schema.schema_id }}</code></td>
                         </tr>
                         <tr>
-                            <th>状态</th>
+                            <th>Status</th>
                             <td>
                                 <span class="badge {% if schema.is_locked %}bg-danger{% else %}bg-success{% endif %}">
                                     {% if schema.is_locked %}🔒 Locked{% else %}📝 Draft{% endif %}
                                 </span>
                                 {% if schema.is_locked and schema.locked_at %}
-                                <small class="text-muted ms-2">锁定于 {{ schema.locked_at|date:"Y-m-d H:i" }}</small>
+                                <small class="text-muted ms-2">Locked at {{ schema.locked_at|date:"Y-m-d H:i" }}</small>
                                 {% endif %}
                             </td>
                         </tr>
                         {% if schema.category %}
                         <tr>
-                            <th>分类</th>
+                            <th>Category</th>
                             <td>
                                 <span class="badge bg-light text-dark">{{ schema.category }}</span>
                             </td>
                         </tr>
                         {% endif %}
                         <tr>
-                            <th>版本</th>
+                            <th>Version</th>
                             <td>v{{ schema.version }}</td>
                         </tr>
                         {% if schema.parent_schema %}
                         <tr>
-                            <th>复制自</th>
+                            <th>Duplicated From</th>
                             <td>
-                                <a href="{% url 'projects:schema_detail' schema.parent_schema.schema_id %}">
+                                <a href="{% url 'dashboard:schema-detail' schema.parent_schema.schema_id %}">
                                     {{ schema.parent_schema.name }}
                                 </a>
                             </td>
@@ -298,16 +296,16 @@
                         {% endif %}
                         {% if schema.created_by %}
                         <tr>
-                            <th>创建者</th>
+                            <th>Created By</th>
                             <td>{{ schema.created_by }}</td>
                         </tr>
                         {% endif %}
                         <tr>
-                            <th>创建时间</th>
+                            <th>Created Time</th>
                             <td>{{ schema.created_at|date:"Y-m-d H:i:s" }}</td>
                         </tr>
                         <tr>
-                            <th>最后更新</th>
+                            <th>Last Updated</th>
                             <td>{{ schema.updated_at|date:"Y-m-d H:i:s" }}</td>
                         </tr>
                     </table>
@@ -319,10 +317,10 @@
         <div class="tab-pane fade" id="json" role="tabpanel">
             <div class="card">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">完整 JSON 定义</h6>
+                    <h6 class="mb-0">Complete JSON Definition</h6>
                     <button class="btn btn-sm btn-outline-secondary" id="copyJsonBtn">
                         <i class="bi bi-clipboard me-1"></i>
-                        复制
+                        Copy
                     </button>
                 </div>
                 <div class="card-body">
@@ -337,18 +335,18 @@
 <div class="modal fade" id="duplicateModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post" action="{% url 'projects:schema_duplicate' schema.schema_id %}">
+            <form method="post" action="{% url 'dashboard:schema-duplicate' schema.schema_id %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">复制 Schema</h5>
+                    <h5 class="modal-title">Duplicate Schema</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <p class="text-muted">
-                        创建一个基于 <strong>{{ schema.name }}</strong> 的新 Draft Schema
+                        Create a new Draft Schema based on <strong>{{ schema.name }}</strong> 
                     </p>
                     <div class="mb-3">
-                        <label class="form-label">新 Schema 名称</label>
+                        <label class="form-label">New Schema Name</label>
                         <input 
                             type="text" 
                             name="new_name" 
@@ -359,14 +357,14 @@
                     </div>
                     <div class="alert alert-info small">
                         <i class="bi bi-info-circle me-1"></i>
-                        新 Schema 将继承所有字段定义，但状态为 Draft（可编辑）
+                        The new schema will inherit all field definitions but will be in Draft status (editable)
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-files me-1"></i>
-                        复制
+                        Copy
                     </button>
                 </div>
             </form>
@@ -379,27 +377,27 @@
 <div class="modal fade" id="lockModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post" action="{% url 'projects:schema_lock' schema.schema_id %}">
+            <form method="post" action="{% url 'dashboard:schema-lock' schema.schema_id %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">锁定 Schema</h5>
+                    <h5 class="modal-title">Lock Schema</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>警告：</strong>锁定后将无法再编辑或删除此 Schema！
+                        <strong>Warning:</strong> Once locked, you will not be able to edit or delete this schema!
                     </div>
-                    <p>确定要锁定 <strong>{{ schema.name }}</strong> 吗？</p>
+                    <p>Are you sure you want to lock <strong>{{ schema.name }}</strong> ?</p>
                     <p class="text-muted small">
-                        通常，Schema 会在首次被项目使用时自动锁定。手动锁定适用于您确定 Schema 已经完成，不需要再修改的情况。
+                        Typically, a schema is automatically locked when first used by a project. Manual locking is suitable when you are certain the schema is complete and no further modifications are needed.
                     </p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-lock me-1"></i>
-                        确认锁定
+                        Confirm Lock
                     </button>
                 </div>
             </form>
@@ -408,29 +406,60 @@
 </div>
 {% endif %}
 
+<!-- Unlock Modal -->
+<div class="modal fade" id="unlockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'dashboard:schema-unlock' schema.schema_id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-unlock-fill me-2"></i>Unlock Schema
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> Unlocking a schema will change it back to a **Draft**.
+                    </div>
+                    <p>This will allow the schema to be **edited** or **deleted**, which may affect projects that rely on it.</p>
+                    <p>Are you sure you want to unlock <strong>{{ schema.name }}</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-unlock-fill me-1"></i>
+                        Unlock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Modal -->
 {% if schema.can_delete %}
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post" action="{% url 'projects:schema_delete' schema.schema_id %}">
+            <form method="post" action="{% url 'dashboard:schema-delete' schema.schema_id %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">删除 Schema</h5>
+                    <h5 class="modal-title">Delete Schema</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-danger">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>警告：</strong>此操作无法撤销！
+                        <strong>Warning:</strong> This action cannot be undone!
                     </div>
-                    <p>确定要删除 <strong>{{ schema.name }}</strong> 吗？</p>
+                    <p>Are you sure you want to delete <strong>{{ schema.name }}</strong> ?</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash me-1"></i>
-                        确认删除
+                        Confirm Delete
                     </button>
                 </div>
             </form>
@@ -438,6 +467,15 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Lock/Unlock Button -->
+<form method="post" action="{% if schema.is_locked %}{% url 'dashboard:schema-unlock' schema.schema_id %}{% else %}{% url 'dashboard:schema-lock' schema.schema_id %}{% endif %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm {% if schema.is_locked %}btn-warning{% else %}btn-outline-secondary{% endif %}" 
+            title="{% if schema.is_locked %}Unlock to Draft{% else %}Lock to Published{% endif %}">
+        <i class="bi {% if schema.is_locked %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}"></i>
+    </button>
+</form>
 
 <script>
 document.getElementById('copyJsonBtn').addEventListener('click', function() {
@@ -445,7 +483,7 @@ document.getElementById('copyJsonBtn').addEventListener('click', function() {
     navigator.clipboard.writeText(jsonContent).then(function() {
         const btn = document.getElementById('copyJsonBtn');
         const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check me-1"></i>已复制！';
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
         btn.classList.remove('btn-outline-secondary');
         btn.classList.add('btn-success');
         

@@ -41,16 +41,7 @@ urlpatterns = [
     path("<str:project_id>/settings/", UpdateProjectSettingsView.as_view(), name="update-settings"),
     path("<str:project_id>/upload-paper/", UploadPaperToProjectView.as_view(), name="upload-paper"),
     
-    # Schema Library URLs
-    path("schemas/", schema_library, name="schema_library"),
-    path("schemas/create/", schema_create, name="schema_create"),
-    path("schemas/<str:schema_id>/", schema_detail, name="schema_detail"),
-    path("schemas/<str:schema_id>/edit/", schema_edit, name="schema_edit"),
-    path("schemas/<str:schema_id>/delete/", schema_delete, name="schema_delete"),
-    path("schemas/<str:schema_id>/duplicate/", schema_duplicate, name="schema_duplicate"),
-    path("schemas/<str:schema_id>/lock/", schema_lock, name="schema_lock"),
-    
-    # Schema API URLs
+    # Schema API URLs (for AJAX calls)
     path("api/schemas/<str:schema_id>/fields/", schema_fields_api, name="schema_fields_api"),
     path("api/schemas/validate/", schema_validate_api, name="schema_validate_api"),
     

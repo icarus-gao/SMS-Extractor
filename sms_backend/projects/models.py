@@ -66,13 +66,19 @@ class Schema(models.Model):
             self.locked_at = timezone.now()
             self.save()
     
+    def unlock(self):
+        """解锁 Schema，使其可编辑"""
+        if self.is_locked:
+            self.is_locked = False
+            self.save()
+    
     def can_edit(self):
         """是否可以编辑"""
         return not self.is_locked
     
     def can_delete(self):
-        """是否可以删除"""
-        return not self.is_locked and self.usage_count == 0
+        """是否可以删除（只要未锁定即可）"""
+        return not self.is_locked
     
     def duplicate(self, new_name=None, created_by=None):
         """复制一个新的 Schema（用于演进）"""

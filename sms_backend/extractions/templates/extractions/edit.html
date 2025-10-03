@@ -1,0 +1,325 @@
+{% extends 'dashboard/base.html' %}
+{% load extraction_filters %}
+
+{% block title %}Edit Extraction - SMS Extractor{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}">Dashboard</a></li>
+            {% if extraction.project %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard:project-detail' extraction.project.project_id %}">{{ extraction.project.name }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item"><a href="{% url 'extractions:detail' extraction.id %}">Extraction #{{ extraction.id }}</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-pencil-square me-2"></i>Edit Extraction
+        </h2>
+        <a href="{% url 'extractions:detail' extraction.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg me-2"></i>Cancel
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Edit Form -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Paper: {{ extraction.paper.title|default:extraction.paper.paper_id }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Please correct the following errors:</strong>
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                <li>{{ field }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="editForm">
+                        {% csrf_token %}
+                        
+                        <!-- Schema Fields -->
+                        {% if extraction.schema %}
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="bi bi-database me-2"></i>Schema: {{ extraction.schema.name }}
+                            </h6>
+                            
+                            {% with fields=extraction.schema.get_fields %}
+                            {% if fields %}
+                                {% for field in fields %}
+                                <div class="mb-3">
+                                    <label for="field_{{ field.field_id }}" class="form-label">
+                                        <strong>{{ field.name }}</strong>
+                                        {% if field.required %}
+                                        <span class="text-danger">*</span>
+                                        {% endif %}
+                                    </label>
+                                    
+                                    {% if field.description %}
+                                    <div class="form-text mb-2">{{ field.description }}</div>
+                                    {% endif %}
+                                    
+                                    {% if field.field_type == 'text' %}
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="field_{{ field.field_id }}" 
+                                               name="field_{{ field.field_id }}"
+                                               value="{{ field_values|get_item:field.field_id|default:'' }}"
+                                               {% if field.required %}required{% endif %}>
+                                    
+                                    {% elif field.field_type == 'textarea' %}
+                                        <textarea class="form-control" 
+                                                  id="field_{{ field.field_id }}" 
+                                                  name="field_{{ field.field_id }}"
+                                                  rows="4"
+                                                  {% if field.required %}required{% endif %}>{{ field_values|get_item:field.field_id|default:'' }}</textarea>
+                                    
+                                    {% elif field.field_type == 'number' %}
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="field_{{ field.field_id }}" 
+                                               name="field_{{ field.field_id }}"
+                                               value="{{ field_values|get_item:field.field_id|default:'' }}"
+                                               step="any"
+                                               {% if field.required %}required{% endif %}>
+                                    
+                                    {% elif field.field_type == 'select' %}
+                                        <select class="form-select" 
+                                                id="field_{{ field.field_id }}" 
+                                                name="field_{{ field.field_id }}"
+                                                {% if field.required %}required{% endif %}>
+                                            <option value="">-- Select --</option>
+                                            {% for option in field.options %}
+                                            <option value="{{ option }}" 
+                                                    {% if option == field_values|get_item:field.field_id %}selected{% endif %}>
+                                                {{ option }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    
+                                    {% elif field.field_type == 'multiselect' %}
+                                        <select class="form-select" 
+                                                id="field_{{ field.field_id }}" 
+                                                name="field_{{ field.field_id }}"
+                                                multiple
+                                                size="5"
+                                                {% if field.required %}required{% endif %}>
+                                            {% for option in field.options %}
+                                            <option value="{{ option }}" 
+                                                    {% if option in field_values|get_item:field.field_id %}selected{% endif %}>
+                                                {{ option }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Hold Ctrl/Cmd to select multiple options</div>
+                                    
+                                    {% elif field.field_type == 'boolean' %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   id="field_{{ field.field_id }}" 
+                                                   name="field_{{ field.field_id }}"
+                                                   value="true"
+                                                   {% if field_values|get_item:field.field_id %}checked{% endif %}>
+                                            <label class="form-check-label" for="field_{{ field.field_id }}">
+                                                Yes
+                                            </label>
+                                        </div>
+                                    
+                                    {% else %}
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="field_{{ field.field_id }}" 
+                                               name="field_{{ field.field_id }}"
+                                               value="{{ field_values|get_item:field.field_id|default:'' }}"
+                                               {% if field.required %}required{% endif %}>
+                                    {% endif %}
+                                    
+                                    <!-- Confidence Score -->
+                                    <div class="mt-2">
+                                        <label for="confidence_{{ field.field_id }}" class="form-label small text-muted">
+                                            Confidence Score (0-100%)
+                                        </label>
+                                        <input type="number" 
+                                               class="form-control form-control-sm" 
+                                               id="confidence_{{ field.field_id }}" 
+                                               name="confidence_{{ field.field_id }}"
+                                               value="{{ field_confidences|get_item:field.field_id|default:100 }}"
+                                               min="0"
+                                               max="100"
+                                               step="1">
+                                    </div>
+                                    
+                                    <!-- ⭐ Evidence (证据) -->
+                                    <div class="mt-2">
+                                        <label for="evidence_{{ field.field_id }}" class="form-label small">
+                                            <i class="bi bi-file-earmark-text me-1"></i>Evidence (证据)
+                                            {% if field.evidence.required %}
+                                            <span class="text-danger">*</span>
+                                            {% endif %}
+                                        </label>
+                                        <textarea class="form-control form-control-sm" 
+                                                  id="evidence_{{ field.field_id }}" 
+                                                  name="evidence_{{ field.field_id }}"
+                                                  rows="3"
+                                                  placeholder="Section: [章节名]&#10;Page: [页码]&#10;Location: [表格/图编号] (可选)&#10;Quote: &quot;[原文引用]&quot;"
+                                                  {% if field.evidence.required %}required{% endif %}>{{ field_evidences|get_item:field.field_id|default:'' }}</textarea>
+                                        <div class="form-text">
+                                            <small>
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                请标注：1) 信息所在位置（章节、页码）; 2) 原文引用
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    This schema has no fields defined.
+                                </div>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No schema associated with this extraction.
+                            </div>
+                        {% endif %}
+
+                        <!-- Extraction Status -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label"><strong>Status</strong></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="pending" {% if extraction.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="processing" {% if extraction.status == 'processing' %}selected{% endif %}>Processing</option>
+                                <option value="completed" {% if extraction.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="verified" {% if extraction.status == 'verified' %}selected{% endif %}>Verified</option>
+                                <option value="failed" {% if extraction.status == 'failed' %}selected{% endif %}>Failed</option>
+                            </select>
+                        </div>
+
+                        <!-- Error Message (for failed extractions) -->
+                        <div class="mb-3">
+                            <label for="error_msg" class="form-label"><strong>Error Message</strong> <small class="text-muted">(optional)</small></label>
+                            <textarea class="form-control" 
+                                      id="error_msg" 
+                                      name="error_msg"
+                                      rows="3"
+                                      placeholder="Enter error message if extraction failed...">{{ extraction.error_msg|default:'' }}</textarea>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'extractions:detail' extraction.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-lg me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Extraction Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Extraction Info</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Extraction ID:</strong><br>
+                    <span class="text-muted">#{{ extraction.id }}</span></p>
+                    
+                    <p><strong>Created:</strong><br>
+                    <span class="text-muted">{{ extraction.created_at|date:"Y-m-d H:i" }}</span></p>
+                    
+                    <p><strong>Last Updated:</strong><br>
+                    <span class="text-muted">{{ extraction.updated_at|date:"Y-m-d H:i" }}</span></p>
+                    
+                    <p class="mb-0"><strong>Extraction Method:</strong><br>
+                    <span class="badge bg-secondary">{{ extraction.get_extraction_method_display }}</span></p>
+                </div>
+            </div>
+
+            <!-- Paper Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Paper Info</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Title:</strong><br>
+                    {{ extraction.paper.title|default:"Untitled" }}</p>
+                    
+                    <p><strong>Authors:</strong><br>
+                    {{ extraction.paper.authors|default:"N/A" }}</p>
+                    
+                    <p class="mb-0"><strong>Year:</strong><br>
+                    {{ extraction.paper.publication_year|default:"N/A" }}</p>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6><i class="bi bi-question-circle me-2"></i>Editing Tips</h6>
+                    <ul class="small mb-0">
+                        <li>Required fields are marked with <span class="text-danger">*</span></li>
+                        <li>Confidence scores represent extraction accuracy (0-100%)</li>
+                        <li>For multiselect fields, hold Ctrl/Cmd to select multiple options</li>
+                        <li>Changes are saved immediately upon submission</li>
+                        <li>You can mark extraction as "Verified" after reviewing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    const requiredFields = this.querySelectorAll('[required]');
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+
+// Remove validation styling on input
+document.querySelectorAll('[required]').forEach(field => {
+    field.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+});
+</script>
+{% endblock %}

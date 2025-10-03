@@ -366,3 +366,108 @@ class PaperDetailAPIView(View):
             "updated_at": paper.updated_at,
         }
         return JsonResponse(data)
+
+
+class BibTeXExportView(View):
+    """Export papers as BibTeX"""
+    
+    def get(self, request):
+        # Get selected paper IDs from query parameters
+        paper_ids = request.GET.getlist('paper_ids')
+        export_type = request.GET.get('type', 'all')  # 'all' or 'selected'
+        project_id = request.GET.get('project_id', None)
+        
+        # Build queryset
+        if export_type == 'selected' and paper_ids:
+            papers = Paper.objects.filter(paper_id__in=paper_ids)
+        elif project_id:
+            papers = Paper.objects.filter(project_id=project_id)
+        else:
+            papers = Paper.objects.all()
+        
+        # Generate BibTeX content
+        bibtex_entries = []
+        for paper in papers:
+            if paper.bibtex_content:
+                # Use existing BibTeX content
+                bibtex_entries.append(paper.bibtex_content.strip())
+            else:
+                # Generate BibTeX entry from paper metadata
+                entry = self._generate_bibtex_entry(paper)
+                if entry:
+                    bibtex_entries.append(entry)
+        
+        # Combine all entries
+        bibtex_content = '\n\n'.join(bibtex_entries)
+        
+        # Create HTTP response
+        from django.http import HttpResponse
+        response = HttpResponse(bibtex_content, content_type='text/plain; charset=utf-8')
+        
+        # Set filename based on export type
+        if project_id:
+            from projects.models import Project
+            try:
+                project = Project.objects.get(project_id=project_id)
+                filename = f'{project.name}_papers.bib'
+            except Project.DoesNotExist:
+                filename = 'papers.bib'
+        elif export_type == 'selected':
+            filename = f'selected_papers_{len(papers)}.bib'
+        else:
+            filename = 'all_papers.bib'
+        
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    def post(self, request):
+        """Handle POST request with paper IDs in body"""
+        paper_ids = request.POST.getlist('paper_ids')
+        project_id = request.POST.get('project_id', None)
+        
+        # Redirect to GET with query parameters
+        from django.http import QueryDict
+        query_dict = QueryDict(mutable=True)
+        if paper_ids:
+            query_dict.setlist('paper_ids', paper_ids)
+            query_dict['type'] = 'selected'
+        if project_id:
+            query_dict['project_id'] = project_id
+        
+        return redirect(f'{request.path}?{query_dict.urlencode()}')
+    
+    def _generate_bibtex_entry(self, paper):
+        """Generate BibTeX entry from paper metadata"""
+        if not paper.citation_key:
+            return None
+        
+        # Determine entry type (default to article)
+        entry_type = 'article'
+        
+        # Build BibTeX entry
+        lines = [f'@{entry_type}{{{paper.citation_key},']
+        
+        if paper.title:
+            title = paper.title.replace('{', '\\{').replace('}', '\\}')
+            lines.append(f'  title = {{{title}}},')
+        
+        if paper.authors:
+            lines.append(f'  author = {{{paper.authors}}},')
+        
+        if paper.year:
+            lines.append(f'  year = {{{paper.year}}},')
+        
+        if paper.journal:
+            journal = paper.journal.replace('{', '\\{').replace('}', '\\}')
+            lines.append(f'  journal = {{{journal}}},')
+        
+        if paper.doi:
+            lines.append(f'  doi = {{{paper.doi}}},')
+        
+        # Remove trailing comma from last line
+        if lines[-1].endswith(','):
+            lines[-1] = lines[-1][:-1]
+        
+        lines.append('}')
+        
+        return '\n'.join(lines)

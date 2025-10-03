@@ -59,6 +59,26 @@
                     <a href="{% url 'papers:import' %}" class="btn btn-outline-primary">
                         <i class="bi bi-file-earmark-arrow-up"></i> Import BibTeX
                     </a>
+                    
+                    <!-- Export Dropdown -->
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-success dropdown-toggle" 
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-download"></i> Export BibTeX
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'papers:export-bibtex' %}?type=all">
+                                    <i class="bi bi-collection me-2"></i>Export All Papers
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" id="exportSelectedBtn">
+                                    <i class="bi bi-check2-square me-2"></i>Export Selected Papers
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 
                 <!-- Sort dropdown -->
@@ -112,6 +132,9 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="selectAllPapers" class="form-check-input" title="Select All">
+                                </th>
                                 <th style="width: 40px;"></th>
                                 <th>Citation Key</th>
                                 <th>Title</th>
@@ -125,6 +148,10 @@
                         <tbody>
                             {% for paper in papers %}
                             <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input paper-checkbox" 
+                                           value="{{ paper.paper_id }}" name="paper_ids">
+                                </td>
                                 <td class="text-center">
                                     {% if paper.pdf_file %}
                                         <i class="bi bi-file-pdf-fill text-danger" title="Has PDF"></i>
@@ -243,4 +270,46 @@
         text-overflow: ellipsis;
     }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select All Checkbox
+    const selectAllCheckbox = document.getElementById('selectAllPapers');
+    const paperCheckboxes = document.querySelectorAll('.paper-checkbox');
+    const exportSelectedBtn = document.getElementById('exportSelectedBtn');
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            paperCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+    
+    // Export Selected Papers
+    if (exportSelectedBtn) {
+        exportSelectedBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get checked paper IDs
+            const checkedBoxes = document.querySelectorAll('.paper-checkbox:checked');
+            const paperIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (paperIds.length === 0) {
+                alert('Please select at least one paper to export.');
+                return;
+            }
+            
+            // Build URL with query parameters
+            const baseUrl = '{% url "papers:export-bibtex" %}';
+            const params = new URLSearchParams();
+            paperIds.forEach(id => params.append('paper_ids', id));
+            params.append('type', 'selected');
+            
+            // Download
+            window.location.href = `${baseUrl}?${params.toString()}`;
+        });
+    }
+});
+</script>
 {% endblock %}

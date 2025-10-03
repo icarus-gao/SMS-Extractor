@@ -1,4 +1,4 @@
-"""Schema 相关的视图函数"""
+"""Schema-related view functions"""
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -12,16 +12,16 @@ from .models import Schema, ProjectSchema, Project
 
 
 def schema_library(request):
-    """Schema Library - 显示所有可用的 Schema"""
+    """Schema Library - Display all available schemas"""
     
-    # 搜索和筛选
+    # Search and filter
     search_query = request.GET.get('q', '')
     category_filter = request.GET.get('category', '')
     status_filter = request.GET.get('status', '')  # all, draft, locked
     
     schemas = Schema.objects.all()
     
-    # 应用搜索
+    # Apply search
     if search_query:
         schemas = schemas.filter(
             Q(name__icontains=search_query) |
@@ -30,17 +30,17 @@ def schema_library(request):
             Q(schema_id__icontains=search_query)
         )
     
-    # 应用分类筛选
+    # Apply category filter
     if category_filter:
         schemas = schemas.filter(category=category_filter)
     
-    # 应用状态筛选
+    # Apply status filter
     if status_filter == 'draft':
         schemas = schemas.filter(is_locked=False)
     elif status_filter == 'locked':
         schemas = schemas.filter(is_locked=True)
     
-    # 获取所有分类（用于筛选器）
+    # Get all categories (for filter)
     categories = Schema.objects.values_list('category', flat=True).distinct()
     categories = [c for c in categories if c]
     
@@ -56,15 +56,15 @@ def schema_library(request):
 
 
 def schema_detail(request, schema_id):
-    """Schema 详情页"""
+    """Schema detail page"""
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
-    # 获取使用该 Schema 的项目
+    # Get projects using this schema
     projects_using = Project.objects.filter(
         project_schemas__schema=schema
     ).distinct()
     
-    # 解析字段定义
+    # Parse fields definition
     try:
         fields_definition = json.loads(schema.fields_definition)
     except:
@@ -82,7 +82,7 @@ def schema_detail(request, schema_id):
 
 @require_http_methods(["GET", "POST"])
 def schema_create(request):
-    """创建新 Schema"""
+    """Create new schema"""
     
     if request.method == "POST":
         try:
@@ -91,13 +91,13 @@ def schema_create(request):
             description = request.POST.get('description', '')
             category = request.POST.get('category', '')
             
-            # 获取字段定义（从表单或 JSON）
+            # Get fields definition (from form or JSON)
             if 'fields_json' in request.POST:
                 fields_definition = request.POST.get('fields_json')
-                # 验证 JSON 格式
+                # Validate JSON format
                 json.loads(fields_definition)
             else:
-                # 如果没有提供 JSON，创建一个空的模板
+                # If no JSON provided, create an empty template
                 fields_definition = json.dumps({
                     "schema_meta": {
                         "name": name,
@@ -113,7 +113,7 @@ def schema_create(request):
                     "fields": []
                 }, ensure_ascii=False, indent=2)
             
-            # 创建 Schema
+            # Create schema
             schema = Schema.objects.create(
                 name=name,
                 name_zh=name_zh,
@@ -123,15 +123,15 @@ def schema_create(request):
                 created_by=request.user.username if request.user.is_authenticated else None,
             )
             
-            messages.success(request, f'Schema "{schema.name}" 创建成功！')
-            return redirect('schema_edit', schema_id=schema.schema_id)
+            messages.success(request, f'Schema "{schema.name}" created successfully!')
+            return redirect('dashboard:schema-edit', schema_id=schema.schema_id)
             
         except json.JSONDecodeError:
-            messages.error(request, '字段定义 JSON 格式错误，请检查！')
+            messages.error(request, 'Invalid JSON format for fields definition!')
         except Exception as e:
-            messages.error(request, f'创建 Schema 失败: {str(e)}')
+            messages.error(request, f'Failed to create schema: {str(e)}')
     
-    # GET 请求 - 显示创建表单
+    # GET request - Show create form
     context = {
         'mode': 'create',
     }
@@ -140,13 +140,13 @@ def schema_create(request):
 
 @require_http_methods(["GET", "POST"])
 def schema_edit(request, schema_id):
-    """编辑 Schema（仅 Draft 状态）"""
+    """Edit schema (Draft status only)"""
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
-    # 检查是否可以编辑
+    # Check if editable
     if schema.is_locked:
-        messages.warning(request, '该 Schema 已锁定，无法编辑。您可以复制一个新的 Schema 进行修改。')
-        return redirect('schema_detail', schema_id=schema_id)
+        messages.warning(request, 'This schema is locked and cannot be edited. You can duplicate it to make changes.')
+        return redirect('dashboard:schema-detail', schema_id=schema_id)
     
     if request.method == "POST":
         try:
@@ -155,24 +155,24 @@ def schema_edit(request, schema_id):
             schema.description = request.POST.get('description', schema.description)
             schema.category = request.POST.get('category', schema.category)
             
-            # 更新字段定义
+            # Update fields definition
             if 'fields_json' in request.POST:
                 fields_definition = request.POST.get('fields_json')
-                # 验证 JSON 格式
+                # Validate JSON format
                 json.loads(fields_definition)
                 schema.fields_definition = fields_definition
             
             schema.save()
             
-            messages.success(request, f'Schema "{schema.name}" 更新成功！')
-            return redirect('schema_detail', schema_id=schema.schema_id)
+            messages.success(request, f'Schema "{schema.name}" updated successfully!')
+            return redirect('dashboard:schema-detail', schema_id=schema.schema_id)
             
         except json.JSONDecodeError:
-            messages.error(request, '字段定义 JSON 格式错误，请检查！')
+            messages.error(request, 'Invalid JSON format for fields definition!')
         except Exception as e:
-            messages.error(request, f'更新 Schema 失败: {str(e)}')
+            messages.error(request, f'Failed to update schema: {str(e)}')
     
-    # GET 请求 - 显示编辑表单
+    # GET request - Show edit form
     context = {
         'mode': 'edit',
         'schema': schema,
@@ -183,26 +183,34 @@ def schema_edit(request, schema_id):
 
 @require_POST
 def schema_delete(request, schema_id):
-    """删除 Schema（仅未使用的 Draft）"""
+    """
+    Delete schema.
+    If the schema is a draft (not locked), it can be deleted.
+    This will also remove it from all associated projects and delete related extractions.
+    """
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
     if not schema.can_delete():
-        if schema.is_locked:
-            messages.error(request, '无法删除已锁定的 Schema！')
-        else:
-            messages.error(request, f'该 Schema 已被 {schema.usage_count} 个项目使用，无法删除！')
-        return redirect('schema_detail', schema_id=schema_id)
+        messages.error(request, 'Cannot delete a locked (Published) schema!')
+        return redirect('dashboard:schema-detail', schema_id=schema_id)
     
     schema_name = schema.name
+    usage_count = schema.usage_count
+    
+    # The ManyToManyField and ForeignKey on_delete=CASCADE will handle deletion.
     schema.delete()
     
-    messages.success(request, f'Schema "{schema_name}" 已删除！')
-    return redirect('schema_library')
+    if usage_count > 0:
+        messages.success(request, f'Schema "{schema_name}" has been deleted. It was removed from {usage_count} project(s) and all related extractions were cleared.')
+    else:
+        messages.success(request, f'Schema "{schema_name}" was successfully deleted.')
+        
+    return redirect('dashboard:schema-library')
 
 
 @require_POST
 def schema_duplicate(request, schema_id):
-    """复制 Schema"""
+    """Duplicate schema"""
     original_schema = get_object_or_404(Schema, schema_id=schema_id)
     
     try:
@@ -214,32 +222,46 @@ def schema_duplicate(request, schema_id):
             created_by=created_by
         )
         
-        messages.success(request, f'Schema "{new_schema.name}" 已创建！')
-        return redirect('schema_edit', schema_id=new_schema.schema_id)
+        messages.success(request, f'Schema "{new_schema.name}" created successfully!')
+        return redirect('dashboard:schema-edit', schema_id=new_schema.schema_id)
         
     except Exception as e:
-        messages.error(request, f'复制 Schema 失败: {str(e)}')
-        return redirect('schema_detail', schema_id=schema_id)
+        messages.error(request, f'Failed to duplicate schema: {str(e)}')
+        return redirect('dashboard:schema-detail', schema_id=schema_id)
 
 
 @require_POST
 def schema_lock(request, schema_id):
-    """手动锁定 Schema"""
+    """Manually lock schema"""
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
     if schema.is_locked:
-        messages.warning(request, '该 Schema 已经是锁定状态！')
+        messages.warning(request, 'This schema is already locked!')
     else:
         schema.lock()
-        messages.success(request, f'Schema "{schema.name}" 已锁定！')
+        messages.success(request, f'Schema "{schema.name}" locked successfully!')
     
-    return redirect('schema_detail', schema_id=schema_id)
+    return redirect('dashboard:schema-detail', schema_id=schema_id)
+
+
+@require_POST
+def schema_unlock(request, schema_id):
+    """Manually unlock a schema, changing it back to a Draft."""
+    schema = get_object_or_404(Schema, schema_id=schema_id)
+    
+    if not schema.is_locked:
+        messages.warning(request, 'This schema is already unlocked (Draft).')
+    else:
+        schema.unlock()
+        messages.success(request, f'Schema "{schema.name}" has been unlocked and is now a Draft. It can now be edited or deleted.')
+    
+    return redirect('dashboard:schema-detail', schema_id=schema_id)
 
 
 # ==================== API Views (JSON Response) ====================
 
 def schema_fields_api(request, schema_id):
-    """API: 获取 Schema 的字段列表（JSON）"""
+    """API: Get schema field list (JSON)"""
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
     try:
@@ -261,31 +283,31 @@ def schema_fields_api(request, schema_id):
 
 
 def schema_validate_api(request):
-    """API: 验证 Schema JSON 格式"""
+    """API: Validate schema JSON format"""
     if request.method == "POST":
         try:
             fields_json = request.POST.get('fields_json', '')
             fields_definition = json.loads(fields_json)
             
-            # 基本验证
+            # Basic validation
             errors = []
             
-            # 必须包含 fields 数组
+            # Must contain fields array
             if 'fields' not in fields_definition:
-                errors.append('缺少 "fields" 数组')
+                errors.append('Missing "fields" array')
             else:
                 fields = fields_definition['fields']
                 if not isinstance(fields, list):
-                    errors.append('"fields" 必须是数组')
+                    errors.append('"fields" must be an array')
                 else:
-                    # 验证每个字段
+                    # Validate each field
                     for idx, field in enumerate(fields):
                         if 'field_id' not in field:
-                            errors.append(f'字段 {idx + 1} 缺少 "field_id"')
+                            errors.append(f'Field {idx + 1} missing "field_id"')
                         if 'name' not in field:
-                            errors.append(f'字段 {idx + 1} 缺少 "name"')
+                            errors.append(f'Field {idx + 1} missing "name"')
                         if 'type' not in field:
-                            errors.append(f'字段 {idx + 1} 缺少 "type"')
+                            errors.append(f'Field {idx + 1} missing "type"')
             
             if errors:
                 return JsonResponse({
@@ -297,14 +319,14 @@ def schema_validate_api(request):
                 return JsonResponse({
                     'success': True,
                     'valid': True,
-                    'message': 'Schema 格式验证通过！'
+                    'message': 'Schema format validation passed!'
                 })
                 
         except json.JSONDecodeError as e:
             return JsonResponse({
                 'success': False,
                 'valid': False,
-                'errors': [f'JSON 格式错误: {str(e)}']
+                'errors': [f'Invalid JSON format: {str(e)}']
             })
         except Exception as e:
             return JsonResponse({
@@ -319,54 +341,57 @@ def schema_validate_api(request):
 
 @require_POST
 def project_add_schema(request, project_id):
-    """为项目添加 Schema"""
+    """Add schema to project"""
     project = get_object_or_404(Project, project_id=project_id)
     schema_id = request.POST.get('schema_id')
     
     if not schema_id:
-        messages.error(request, '请选择一个 Schema！')
-        return redirect('project_detail', project_id=project_id)
+        messages.error(request, 'Please select a schema!')
+        return redirect('dashboard:project-detail', project_id=project_id)
     
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
     try:
-        # 检查是否已关联
+        # Check if already associated
         if ProjectSchema.objects.filter(project=project, schema=schema).exists():
-            messages.warning(request, f'项目已关联 Schema "{schema.name}"！')
+            messages.warning(request, f'Schema "{schema.name}" is already added to this project!')
         else:
             ProjectSchema.objects.create(
                 project=project,
                 schema=schema,
             )
-            messages.success(request, f'成功为项目添加 Schema "{schema.name}"！')
+            messages.success(request, f'Schema "{schema.name}" added to project successfully!')
             
     except Exception as e:
-        messages.error(request, f'添加 Schema 失败: {str(e)}')
+        messages.error(request, f'Failed to add schema: {str(e)}')
     
-    return redirect('project_detail', project_id=project_id)
+    return redirect('dashboard:project-detail', project_id=project_id)
 
 
 @require_POST
 def project_remove_schema(request, project_id, schema_id):
-    """移除项目的 Schema 关联"""
+    """Remove schema from project and all related extraction records"""
     project = get_object_or_404(Project, project_id=project_id)
     schema = get_object_or_404(Schema, schema_id=schema_id)
     
     try:
         project_schema = ProjectSchema.objects.get(project=project, schema=schema)
         
-        # 检查是否有相关的 extractions
+        # Count related extractions
         extraction_count = project.extractions.filter(schema=schema).count()
-        if extraction_count > 0:
-            messages.error(request, f'无法移除！该 Schema 已有 {extraction_count} 条提取记录。')
-            return redirect('project_detail', project_id=project_id)
         
+        # Delete all related extraction records first
+        if extraction_count > 0:
+            deleted_count = project.extractions.filter(schema=schema).delete()[0]
+            messages.warning(request, f'Deleted {deleted_count} extraction record(s) associated with schema "{schema.name}".')
+        
+        # Then remove the schema from project
         project_schema.delete()
-        messages.success(request, f'已移除 Schema "{schema.name}"！')
+        messages.success(request, f'Schema "{schema.name}" removed from project successfully!')
         
     except ProjectSchema.DoesNotExist:
-        messages.error(request, '该 Schema 未关联到此项目！')
+        messages.error(request, 'This schema is not associated with this project!')
     except Exception as e:
-        messages.error(request, f'移除 Schema 失败: {str(e)}')
+        messages.error(request, f'Failed to remove schema: {str(e)}')
     
-    return redirect('project_detail', project_id=project_id)
+    return redirect('dashboard:project-detail', project_id=project_id)

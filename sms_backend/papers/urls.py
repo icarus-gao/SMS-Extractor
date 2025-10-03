@@ -10,6 +10,7 @@ from .views import (
     PaperUploadPDFView,
     PaperUpdateMetadataView,
     BibTeXImportView,
+    BibTeXExportView,
     PaperListAPIView,
     PaperDetailAPIView,
 )
@@ -21,6 +22,7 @@ urlpatterns = [
     path('', PaperLibraryView.as_view(), name='library'),
     path('upload/', PaperUploadView.as_view(), name='upload'),
     path('import/', BibTeXImportView.as_view(), name='import'),
+    path('export/bibtex/', BibTeXExportView.as_view(), name='export-bibtex'),
     path('<str:paper_id>/', PaperDetailView.as_view(), name='detail'),
     path('<str:paper_id>/edit/', PaperUpdateView.as_view(), name='edit'),
     path('<str:paper_id>/delete/', PaperDeleteView.as_view(), name='delete'),
